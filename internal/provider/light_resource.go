@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/richseviora/huego/pkg/resources"
 )
 
@@ -93,6 +94,7 @@ func (l *LightResource) Read(ctx context.Context, request resource.ReadRequest, 
 		return
 	}
 	light, err := l.client.LightService.GetLight(ctx, data.Id.ValueString())
+	tflog.Info(ctx, "Returning Value", map[string]interface{}{"light": light, "err": err, "id": data.Id.ValueString()})
 	if err != nil {
 		response.Diagnostics.AddError(
 			"Error reading light",
@@ -102,6 +104,12 @@ func (l *LightResource) Read(ctx context.Context, request resource.ReadRequest, 
 	data.Name = types.StringValue(light.Metadata.Name)
 	data.Function = types.StringValue(light.Metadata.Function)
 	data.Id = types.StringValue(light.ID)
+	if data.Id.ValueString() == "" {
+		response.Diagnostics.AddError(
+			"Error reading light",
+			"Light ID not returned from object")
+		return
+	}
 
 	response.Diagnostics.Append(response.State.Set(ctx, &data)...)
 	if response.Diagnostics.HasError() {

@@ -9,6 +9,6 @@ terraform {
 provider "philips-hue" {}
 
 resource philips-hue_light "first_light" {
-  name = "hallway"
+  name = "Hallway Lamp"
   function = "decorative"
 }
