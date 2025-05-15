@@ -51,14 +51,14 @@ func (l *LightResource) Schema(ctx context.Context, request resource.SchemaReque
 				WriteOnly: false,
 			},
 			"name": schema.StringAttribute{
-				Optional:            false,
+				Required:            true,
 				Description:         "The name of the Light device in the Hue Bridge. ",
 				MarkdownDescription: "",
 				Validators:          nil,
 				PlanModifiers:       nil,
 			},
 			"function": schema.StringAttribute{
-				Optional:            false,
+				Required:            true,
 				Description:         "The function of the Light device in the Hue Bridge. ",
 				MarkdownDescription: "",
 				Validators: []validator.String{
@@ -88,13 +88,25 @@ func (l *LightResource) Create(ctx context.Context, request resource.CreateReque
 
 func (l *LightResource) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) {
 	var data LightResourceModel
-
 	response.Diagnostics.Append(request.State.Get(ctx, &data)...)
 	if response.Diagnostics.HasError() {
 		return
 	}
+	light, err := l.client.LightService.GetLight(ctx, data.Id.ValueString())
+	if err != nil {
+		response.Diagnostics.AddError(
+			"Error reading light",
+			"Could not read light ID "+data.Id.ValueString()+": "+err.Error())
+		return
+	}
+	data.Name = types.StringValue(light.Metadata.Name)
+	data.Function = types.StringValue(light.Metadata.Function)
+	data.Id = types.StringValue(light.ID)
 
 	response.Diagnostics.Append(response.State.Set(ctx, &data)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (l *LightResource) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
