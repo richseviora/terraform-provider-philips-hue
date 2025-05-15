@@ -22,8 +22,8 @@ import (
 var _ resource.Resource = &ExampleResource{}
 var _ resource.ResourceWithImportState = &ExampleResource{}
 
-func NewExampleResource() resource.Resource {
-	return &ExampleResource{}
+func NewLightResource() resource.Resource {
+	return &LightResource{}
 }
 
 // ExampleResource defines the resource implementation.
