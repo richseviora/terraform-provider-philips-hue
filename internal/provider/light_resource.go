@@ -27,6 +27,7 @@ type LightResourceModel struct {
 	Id       types.String `tfsdk:"id"`
 	Name     types.String `tfsdk:"name"`
 	Function types.String `tfsdk:"function"`
+	DeviceID types.String `tfsdk:"device_id"`
 	// Archetype types.String `tfsdk:"archetype"`
 	// TODO: Add power-on attributes
 
@@ -66,6 +67,17 @@ func (l *LightResource) Schema(ctx context.Context, request resource.SchemaReque
 					stringvalidator.OneOf("mixed", "decorative", "functional", "unknown"),
 				},
 			},
+			"device_id": schema.StringAttribute{
+				Computed:            true,
+				Sensitive:           false,
+				Description:         "The device UUID of the light in the Hue Bridge. This ID is used to assign device membership in rooms and scenes.",
+				MarkdownDescription: "",
+				DeprecationMessage:  "",
+				Validators:          nil,
+				PlanModifiers:       nil,
+				Default:             nil,
+				WriteOnly:           false,
+			},
 		},
 	}
 }
@@ -104,6 +116,7 @@ func (l *LightResource) Read(ctx context.Context, request resource.ReadRequest, 
 	data.Name = types.StringValue(light.Metadata.Name)
 	data.Function = types.StringValue(light.Metadata.Function)
 	data.Id = types.StringValue(light.ID)
+	data.DeviceID = types.StringValue(light.Owner.RID)
 	if data.Id.ValueString() == "" {
 		response.Diagnostics.AddError(
 			"Error reading light",
@@ -112,14 +125,46 @@ func (l *LightResource) Read(ctx context.Context, request resource.ReadRequest, 
 	}
 
 	response.Diagnostics.Append(response.State.Set(ctx, &data)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (l *LightResource) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var data LightResourceModel
+
+	// Read Terraform plan data into the model
+	response.Diagnostics.Append(request.Plan.Get(ctx, &data)...)
+
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	update := struct {
+		Name     *string `json:"name"`
+		Function *string `json:"function"`
+	}{Name: nil, Function: nil}
+	if data.Name.ValueString() != "" {
+		update.Name = data.Name.ValueStringPointer()
+	}
+	if data.Function.ValueString() != "" {
+		update.Function = data.Function.ValueStringPointer()
+	}
+
+	lightUpdate := resources.LightUpdate{
+		ID:       data.Id.ValueString(),
+		Metadata: &update,
+	}
+	tflog.Info(ctx, "Updating Light", map[string]interface{}{"id": data.Id.ValueString(), "light": lightUpdate})
+	err := l.client.LightService.UpdateLight(ctx, lightUpdate)
+
+	tflog.Info(ctx, "Returning Updated Light", map[string]interface{}{"err": err, "id": data.Id.ValueString()})
+
+	if err != nil {
+		response.Diagnostics.AddError(
+			"Error updating light",
+			"Could not update light ID "+data.Id.ValueString()+": "+err.Error())
+		return
+	}
+	// Save updated data into Terraform state
+	response.Diagnostics.Append(response.State.Set(ctx, &data)...)
 }
 
 func (l *LightResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
