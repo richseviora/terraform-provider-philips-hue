@@ -68,15 +68,12 @@ func (l *LightResource) Schema(ctx context.Context, request resource.SchemaReque
 				},
 			},
 			"device_id": schema.StringAttribute{
-				Computed:            true,
-				Sensitive:           false,
-				Description:         "The device UUID of the light in the Hue Bridge. This ID is used to assign device membership in rooms and scenes.",
-				MarkdownDescription: "",
-				DeprecationMessage:  "",
-				Validators:          nil,
-				PlanModifiers:       nil,
-				Default:             nil,
-				WriteOnly:           false,
+				Computed:    true,
+				Sensitive:   false,
+				Description: "The device UUID of the light in the Hue Bridge. This ID is used to assign device membership in rooms and scenes.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
