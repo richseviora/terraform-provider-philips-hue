@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -18,6 +17,10 @@ import (
 var _ resource.Resource = &RoomResource{}
 var _ resource.ResourceWithImportState = &RoomResource{}
 var _ resource.ResourceWithConfigure = &RoomResource{}
+
+func NewRoomResource() resource.Resource {
+	return &RoomResource{}
+}
 
 type RoomResource struct {
 	client *resources.APIClient
@@ -63,7 +66,6 @@ func (r *RoomResource) Schema(ctx context.Context, request resource.SchemaReques
 			},
 			"archetype": schema.StringAttribute{
 				Required: true,
-				Default:  stringdefault.StaticString(resources.Other.String()),
 				Validators: []validator.String{
 					stringvalidator.OneOf(resources.AreaNames[:]...),
 				},
