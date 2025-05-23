@@ -6,6 +6,8 @@ terraform {
   }
 }
 
+provider "philips-hue" {}
+
 locals {
   bathroom_lights = [
     "2ee7a2f5-7427-4109-b96e-94cf1ebf4e76",
@@ -16,8 +18,6 @@ locals {
     "e4806fac-e561-4823-90fe-b8340f663840",
   ]
 }
-
-provider "philips-hue" {}
 
 import {
   to = philips-hue_room.bathroom
