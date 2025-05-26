@@ -10,7 +10,7 @@ provider "philips-hue" {}
 
 locals {
   bathroom_lights = [
-    "2ee7a2f5-7427-4109-b96e-94cf1ebf4e76",
+    "8c995774-d012-46cf-9e0b-4c769f4f951f",
     "8779601e-c192-4bfe-b28e-84eaec316705",
     "646a60ec-ead5-4306-988b-7732223e978f",
     "64ad8457-e15a-459e-8559-29a134b8fb3e",
