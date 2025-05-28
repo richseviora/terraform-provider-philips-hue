@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -31,6 +33,7 @@ type RoomResourceModel struct {
 	Name      types.String `tfsdk:"name"`
 	DeviceIds types.Set    `tfsdk:"device_ids"`
 	Archetype types.String `tfsdk:"archetype"`
+	Reference types.Object `tfsdk:"reference"`
 }
 
 func (r *RoomResource) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -70,6 +73,18 @@ func (r *RoomResource) Schema(ctx context.Context, request resource.SchemaReques
 					stringvalidator.OneOf(resources.AreaNames[:]...),
 				},
 			},
+			"reference": schema.ObjectAttribute{
+				Computed:            true,
+				Description:         "The reference of the Room in the Hue Bridge.",
+				MarkdownDescription: "",
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
+				AttributeTypes: map[string]attr.Type{
+					"rid":  types.StringType,
+					"type": types.StringType,
+				},
+			},
 		},
 	}
 }
@@ -101,11 +116,20 @@ func (r *RoomResource) Create(ctx context.Context, request resource.CreateReques
 		return
 	}
 
+	children := make([]resources.Child, len(data.DeviceIds.Elements()))
+	for _, deviceId := range data.DeviceIds.Elements() {
+		children = append(children, resources.Child{
+			Rid:   deviceId.String(),
+			Rtype: "light",
+		})
+	}
+
 	room := resources.RoomCreate{
 		Metadata: resources.RoomMetadata{
 			Name:      data.Name.ValueString(),
 			Archetype: area,
 		},
+		Children: children,
 	}
 
 	createdRoom, err := r.client.RoomService.CreateRoom(ctx, room)
@@ -116,6 +140,13 @@ func (r *RoomResource) Create(ctx context.Context, request resource.CreateReques
 		return
 	}
 
+	data.Reference, _ = types.ObjectValue(map[string]attr.Type{
+		"rid":   types.StringType,
+		"rtype": types.StringType,
+	}, map[string]attr.Value{
+		"rid":   types.StringValue(createdRoom.RID),
+		"rtype": types.StringValue("room"),
+	})
 	data.Id = types.StringValue(createdRoom.RID)
 	response.Diagnostics.Append(response.State.Set(ctx, &data)...)
 }
@@ -138,6 +169,13 @@ func (r *RoomResource) Read(ctx context.Context, request resource.ReadRequest, r
 	data.Name = types.StringValue(room.Metadata.Name)
 	data.Archetype = types.StringValue(room.Metadata.Archetype.String())
 	data.Id = types.StringValue(room.ID)
+	data.Reference, _ = types.ObjectValue(map[string]attr.Type{
+		"rid":   types.StringType,
+		"rtype": types.StringType,
+	}, map[string]attr.Value{
+		"rid":   types.StringValue(room.ID),
+		"rtype": types.StringValue("room"),
+	})
 	deviceIds := make([]string, len(room.Children))
 	for i, child := range room.Children {
 		deviceIds[i] = child.Rid
@@ -162,12 +200,21 @@ func (r *RoomResource) Update(ctx context.Context, request resource.UpdateReques
 		return
 	}
 
+	children := make([]resources.Child, len(data.DeviceIds.Elements()))
+	for _, deviceId := range data.DeviceIds.Elements() {
+		children = append(children, resources.Child{
+			Rid:   deviceId.String(),
+			Rtype: "light",
+		})
+	}
+
 	update := resources.RoomUpdate{
 		ID: data.Id.ValueString(),
 		Metadata: &resources.RoomMetadata{
 			Name:      data.Name.ValueString(),
 			Archetype: area,
 		},
+		Children: &children,
 	}
 
 	err = r.client.RoomService.UpdateRoom(ctx, update)
