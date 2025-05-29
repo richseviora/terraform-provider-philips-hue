@@ -81,8 +81,8 @@ func (r *RoomResource) Schema(ctx context.Context, request resource.SchemaReques
 					objectplanmodifier.UseStateForUnknown(),
 				},
 				AttributeTypes: map[string]attr.Type{
-					"rid":  types.StringType,
-					"type": types.StringType,
+					"rid":   types.StringType,
+					"rtype": types.StringType,
 				},
 			},
 		},

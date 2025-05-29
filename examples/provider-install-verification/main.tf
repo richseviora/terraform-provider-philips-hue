@@ -25,6 +25,11 @@ import {
 }
 
 import {
+  to = philips-hue_scene.bathroom_bright
+  id = "68b39f81-1c15-4c82-bd0b-ab28606f3d2e"
+}
+
+import {
   for_each = local.bathroom_lights
   to = philips-hue_light.bathroom[each.key]
   id = each.value
@@ -45,4 +50,10 @@ resource philips-hue_room "bathroom" {
   name      = "Bathroom"
   archetype = "bathroom"
   device_ids = philips-hue_light.bathroom[*].device_id
+}
+
+resource philips-hue_scene "bathroom_bright" {
+  group = philips-hue_room.bathroom.reference
+  name = "Bright"
+  actions = []
 }

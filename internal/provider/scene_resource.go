@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-log/tfsdklog"
 	"github.com/richseviora/huego/pkg/resources"
 )
 
@@ -29,11 +31,25 @@ type SceneResource struct {
 	client *resources.APIClient
 }
 
+type SceneActionColorModel struct {
+	X types.Float64 `tfsdk:"x"`
+	Y types.Float64 `tfsdk:"y"`
+}
+
+type SceneActionModel struct {
+	TargetId         types.String           `tfsdk:"target_id"`
+	TargetType       types.String           `tfsdk:"target_type"`
+	Brightness       types.Int32            `tfsdk:"brightness"`
+	On               types.Bool             `tfsdk:"on"`
+	Color            *SceneActionColorModel `tfsdk:"color"`
+	ColorTemperature types.Int32            `tfsdk:"color_temperature"`
+}
+
 type SceneResourceModel struct {
-	Id      types.String   `tfsdk:"id"`
-	Name    types.String   `tfsdk:"name"`
-	Actions []types.Object `tfsdk:"actions"`
-	Group   types.Object   `tfsdk:"group"`
+	Id      types.String       `tfsdk:"id"`
+	Name    types.String       `tfsdk:"name"`
+	Actions []SceneActionModel `tfsdk:"actions"`
+	Group   types.Object       `tfsdk:"group"`
 }
 
 func (s *SceneResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -162,6 +178,7 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	scene, err := s.client.SceneService.GetScene(ctx, data.Id.ValueString())
+	tfsdklog.Info(ctx, "scene:", map[string]interface{}{"scene": scene})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading scene",
@@ -178,15 +195,48 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		"rid":   types.StringValue(scene.Group.Rid),
 		"rtype": types.StringValue(scene.Group.Rtype),
 	})
-	actions := make([]types.Object, len(scene.Actions))
-	//for i, action := range scene.Actions {
-	//	newAction := types.ObjectValue(map[string]attr.Type{
-	//
-	//	})
-	//	actions = append(actions, newAction)
-	//}
-	data.Actions = actions
+	actions := make([]SceneActionModel, len(scene.Actions))
+	for i, action := range scene.Actions {
+		tflog.Info(ctx, "action:", map[string]interface{}{"action": action})
+		var onValue types.Bool
+		if action.Action.On != nil {
+			onValue = types.BoolValue(action.Action.On.On)
+			tflog.Info(ctx, "onValue:", map[string]interface{}{"onValue": onValue})
+		}
+		var colorTemp types.Int32
+		if action.Action.ColorTemperature != nil {
+			mirek := action.Action.ColorTemperature.Mirek
+			kelvin := mirek
+			colorTemp = types.Int32Value(int32(kelvin))
+			tflog.Info(ctx, "colorTemp:", map[string]interface{}{"colorTemp": colorTemp.String(), "originalColorTemp": kelvin})
+		}
+		var color *SceneActionColorModel
+		if action.Action.Color != nil {
+			color = &SceneActionColorModel{
+				X: types.Float64Value(action.Action.Color.XY.X),
+				Y: types.Float64Value(action.Action.Color.XY.Y),
+			}
+			tflog.Info(ctx, "color:", map[string]interface{}{"color": color})
+			fmt.Println(color)
+		}
+		model := SceneActionModel{
+			TargetId:         types.StringValue(action.Target.Rid),
+			TargetType:       types.StringValue(action.Target.Rtype),
+			On:               onValue,
+			Brightness:       types.Int32Value(int32(action.Action.Dimming.Brightness)),
+			Color:            color,
+			ColorTemperature: colorTemp,
+		}
+		tflog.Info(ctx, "writing action:", map[string]interface{}{"action": model})
+		actions[i] = model
+	}
 
+	tflog.Info(ctx, "actions:", map[string]interface{}{"actions": actions})
+
+	data.Actions = actions
+	for _, action := range data.Actions {
+		tflog.Info(ctx, "RETURN action:", map[string]interface{}{"target_id": action.TargetId.ValueString()})
+	}
 	// TODO: Populate actions
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
