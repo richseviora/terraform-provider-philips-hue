@@ -104,6 +104,13 @@ func (s *SceneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 						"color": schema.SingleNestedAttribute{
 							Optional: true,
+							Validators: []validator.Object{
+								objectvalidator.ExactlyOneOf(
+									path.Expressions{
+										path.MatchRelative().AtParent().AtName("color_temperature"),
+									}...,
+								),
+							},
 							Attributes: map[string]schema.Attribute{
 								"x": schema.Float64Attribute{
 									Required:    true,
@@ -129,15 +136,6 @@ func (s *SceneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 							},
 						},
 					},
-					Validators: []validator.Object{
-						objectvalidator.ExactlyOneOf(
-							path.MatchRelative().AtName("color"),
-							path.MatchRelative().AtName("color_temperature"),
-							//path.MatchRelative().AtName("effects"),
-							//path.MatchRelative().AtName("gradient"),
-						),
-					},
-					PlanModifiers: nil,
 				},
 			},
 		},
@@ -206,7 +204,7 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		var colorTemp types.Int32
 		if action.Action.ColorTemperature != nil {
 			mirek := action.Action.ColorTemperature.Mirek
-			kelvin := mirek
+			kelvin := resources.MirekToKelvin(float64(mirek))
 			colorTemp = types.Int32Value(int32(kelvin))
 			tflog.Info(ctx, "colorTemp:", map[string]interface{}{"colorTemp": colorTemp.String(), "originalColorTemp": kelvin})
 		}

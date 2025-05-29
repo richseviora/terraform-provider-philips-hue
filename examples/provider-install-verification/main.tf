@@ -55,5 +55,11 @@ resource philips-hue_room "bathroom" {
 resource philips-hue_scene "bathroom_bright" {
   group = philips-hue_room.bathroom.reference
   name = "Bright"
-  actions = []
+  actions = [for light in philips-hue_light.bathroom : {
+    target_id = light.id
+    target_type = "light"
+    on = true
+    color_temperature = 2702
+    brightness = 100
+  }]
 }
