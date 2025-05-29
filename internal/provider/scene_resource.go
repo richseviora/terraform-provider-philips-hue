@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework-validators/float64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -76,15 +78,47 @@ func (s *SceneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						"brightness": schema.Int32Attribute{
 							Required:    true,
 							Description: "The brightness to apply to the target from 0 to 100",
+							Validators: []validator.Int32{
+								int32validator.Between(0, 100),
+							},
+						},
+						"on": schema.BoolAttribute{
+							Required:    true,
+							Description: "Whether the target should be turned on or off.",
+						},
+						"color": schema.SingleNestedAttribute{
+							Optional: true,
+							Attributes: map[string]schema.Attribute{
+								"x": schema.Float64Attribute{
+									Required:    true,
+									Description: "The x value of the color to apply to the target.",
+									Validators: []validator.Float64{
+										float64validator.Between(0, 1),
+									},
+								},
+								"y": schema.Float64Attribute{
+									Required:    true,
+									Description: "The y value of the color to apply to the target.",
+									Validators: []validator.Float64{
+										float64validator.Between(0, 1),
+									},
+								},
+							},
+						},
+						"color_temperature": schema.Int32Attribute{
+							Optional:    true,
+							Description: "The color temperature to apply to the target from 2000 K to 6500 K",
+							Validators: []validator.Int32{
+								int32validator.Between(2000, 6500),
+							},
 						},
 					},
-					CustomType: nil,
 					Validators: []validator.Object{
 						objectvalidator.ExactlyOneOf(
 							path.MatchRelative().AtName("color"),
 							path.MatchRelative().AtName("color_temperature"),
-							path.MatchRelative().AtName("effects"),
-							path.MatchRelative().AtName("gradient"),
+							//path.MatchRelative().AtName("effects"),
+							//path.MatchRelative().AtName("gradient"),
 						),
 					},
 					PlanModifiers: nil,
