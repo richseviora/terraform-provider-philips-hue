@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
-func TestAccExampleResource(t *testing.T) {
+func TestSceneResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -23,17 +23,17 @@ func TestAccExampleResource(t *testing.T) {
 				Config: testAccExampleResourceConfig("one"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
-						"scaffolding_example.test",
+						"philips-hue_scene.test",
 						tfjsonpath.New("id"),
 						knownvalue.StringExact("example-id"),
 					),
 					statecheck.ExpectKnownValue(
-						"scaffolding_example.test",
+						"philips-hue_scene.test",
 						tfjsonpath.New("defaulted"),
 						knownvalue.StringExact("example value when not configured"),
 					),
 					statecheck.ExpectKnownValue(
-						"scaffolding_example.test",
+						"philips-hue_scene.test",
 						tfjsonpath.New("configurable_attribute"),
 						knownvalue.StringExact("one"),
 					),
@@ -41,7 +41,7 @@ func TestAccExampleResource(t *testing.T) {
 			},
 			// ImportState testing
 			{
-				ResourceName:      "scaffolding_example.test",
+				ResourceName:      "philips-hue_scene.test",
 				ImportState:       true,
 				ImportStateVerify: true,
 				// This is not normally necessary, but is here because this
@@ -55,17 +55,17 @@ func TestAccExampleResource(t *testing.T) {
 				Config: testAccExampleResourceConfig("two"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
-						"scaffolding_example.test",
+						"philips-hue_scene.test",
 						tfjsonpath.New("id"),
 						knownvalue.StringExact("example-id"),
 					),
 					statecheck.ExpectKnownValue(
-						"scaffolding_example.test",
+						"philips-hue_scene.test",
 						tfjsonpath.New("defaulted"),
 						knownvalue.StringExact("example value when not configured"),
 					),
 					statecheck.ExpectKnownValue(
-						"scaffolding_example.test",
+						"philips-hue_scene.test",
 						tfjsonpath.New("configurable_attribute"),
 						knownvalue.StringExact("two"),
 					),
@@ -78,8 +78,21 @@ func TestAccExampleResource(t *testing.T) {
 
 func testAccExampleResourceConfig(configurableAttribute string) string {
 	return fmt.Sprintf(`
-resource "scaffolding_example" "test" {
-  configurable_attribute = %[1]q
+resource "philips-hue_light" "test" {
+  name = %[1]q
+  function = "functional"
+}
+
+resource "philips-hue_room" "room" {
+  name = "test room"
+  archetype = "living_room"
+device_ids = [philips-hue_light.test.device_id]
+}
+
+resource "philips-hue_scene" "test" {
+  name = "test scene"
+ actions = []
+ group = philips-hue_room.room.reference
 }
 `, configurableAttribute)
 }

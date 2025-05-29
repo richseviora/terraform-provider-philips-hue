@@ -3,12 +3,14 @@ package provider
 import (
 	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework-validators/objectvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/richseviora/huego/pkg/resources"
 )
@@ -17,15 +19,19 @@ var _ resource.Resource = &SceneResource{}
 var _ resource.ResourceWithImportState = &SceneResource{}
 var _ resource.ResourceWithConfigure = &SceneResource{}
 
+func NewSceneResource() resource.Resource {
+	return &SceneResource{}
+}
+
 type SceneResource struct {
 	client *resources.APIClient
 }
 
 type SceneResourceModel struct {
-	Id      types.String     `tfsdk:"id"`
-	Name    types.String     `tfsdk:"name"`
-	Actions []types.String   `tfsdk:"actions"`
-	Group   types.ObjectType `tfsdk:"group"`
+	Id      types.String   `tfsdk:"id"`
+	Name    types.String   `tfsdk:"name"`
+	Actions []types.Object `tfsdk:"actions"`
+	Group   types.Object   `tfsdk:"group"`
 }
 
 func (s *SceneResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -52,6 +58,36 @@ func (s *SceneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				AttributeTypes: map[string]attr.Type{
 					"rid":   types.StringType,
 					"rtype": types.StringType,
+				},
+			},
+			"actions": schema.SetNestedAttribute{
+				Required:    true,
+				Description: "The actions and targets to perform when the scene is triggered.",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"target_id": schema.StringAttribute{
+							Required:    true,
+							Description: "The target ID to apply the action to.",
+						},
+						"target_type": schema.StringAttribute{
+							Required:    true,
+							Description: "The target type to apply the action to.",
+						},
+						"brightness": schema.Int32Attribute{
+							Required:    true,
+							Description: "The brightness to apply to the target from 0 to 100",
+						},
+					},
+					CustomType: nil,
+					Validators: []validator.Object{
+						objectvalidator.ExactlyOneOf(
+							path.MatchRelative().AtName("color"),
+							path.MatchRelative().AtName("color_temperature"),
+							path.MatchRelative().AtName("effects"),
+							path.MatchRelative().AtName("gradient"),
+						),
+					},
+					PlanModifiers: nil,
 				},
 			},
 		},
@@ -101,13 +137,23 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	data.Name = types.StringValue(scene.Metadata.Name)
-	data.Group = types.StringValue(scene.Group.Rid)
+	data.Group, _ = types.ObjectValue(map[string]attr.Type{
+		"rid":   types.StringType,
+		"rtype": types.StringType,
+	}, map[string]attr.Value{
+		"rid":   types.StringValue(scene.Group.Rid),
+		"rtype": types.StringValue(scene.Group.Rtype),
+	})
+	actions := make([]types.Object, len(scene.Actions))
+	//for i, action := range scene.Actions {
+	//	newAction := types.ObjectValue(map[string]attr.Type{
+	//
+	//	})
+	//	actions = append(actions, newAction)
+	//}
+	data.Actions = actions
 
-	deviceIDs := make([]types.String, len(scene.Actions))
-	for i, action := range scene.Actions {
-		deviceIDs[i] = types.StringValue(action.Target.RID)
-	}
-	data.DeviceIDs = deviceIDs
+	// TODO: Populate actions
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
@@ -119,16 +165,9 @@ func (s *SceneResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	update := resources.SceneUpdate{
-		ID: data.Id.ValueString(),
-		Metadata: &struct {
-			Name *string `json:"name"`
-		}{
-			Name: data.Name.ValueStringPointer(),
-		},
-	}
+	update := resources.SceneUpdate{}
 
-	err := s.client.SceneService.UpdateScene(ctx, update)
+	_, err := s.client.SceneService.UpdateScene(ctx, data.Id.String(), update)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating scene",

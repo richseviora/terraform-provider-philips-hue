@@ -76,6 +76,7 @@ func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.R
 	return []func() resource.Resource{
 		NewLightResource,
 		NewRoomResource,
+		NewSceneResource,
 	}
 }
 
@@ -93,7 +94,7 @@ func (p *ScaffoldingProvider) DataSources(ctx context.Context) []func() datasour
 
 func (p *ScaffoldingProvider) Functions(ctx context.Context) []func() function.Function {
 	return []func() function.Function{
-		//NewExampleFunction,
+		NewRGBToColorFunction,
 	}
 }
 
