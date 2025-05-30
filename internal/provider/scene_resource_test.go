@@ -5,6 +5,7 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -12,6 +13,19 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
+
+func TestSceneResource_Unit(t *testing.T) {
+	resource.UnitTest(t, resource.TestCase{
+		IsUnitTest:               true,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testUnitExampleResourceConfig(),
+				ExpectError: regexp.MustCompile(`Invalid Attribute Combination`),
+			},
+		},
+	})
+}
 
 func TestSceneResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
@@ -74,6 +88,25 @@ func TestSceneResource(t *testing.T) {
 			// Delete testing automatically occurs in TestCase
 		},
 	})
+}
+
+func testUnitExampleResourceConfig() string {
+	return `
+resource "philips-hue_scene" "test" {
+  name = "test scene"
+  group = { rid: "abc", rtype: "room" }
+  actions = [
+  {
+  target_id = "abc"
+  target_type = "light"
+  on = true
+  brightness = 100
+  color_temperature = 2500
+  color = { x = 0.31271592, y = 0.3290015 }
+  }
+]
+}
+`
 }
 
 func testAccExampleResourceConfig(configurableAttribute string) string {
