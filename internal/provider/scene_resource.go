@@ -36,10 +36,15 @@ type SceneActionColorModel struct {
 	Y types.Float64 `tfsdk:"y"`
 }
 
+type ResourceReference struct {
+	Rid   types.String `tfsdk:"rid"`
+	Rtype types.String `tfsdk:"rtype"`
+}
+
 type SceneActionModel struct {
 	TargetId         types.String           `tfsdk:"target_id"`
 	TargetType       types.String           `tfsdk:"target_type"`
-	Brightness       types.Int32            `tfsdk:"brightness"`
+	Brightness       types.Float64          `tfsdk:"brightness"`
 	On               types.Bool             `tfsdk:"on"`
 	Color            *SceneActionColorModel `tfsdk:"color"`
 	ColorTemperature types.Int32            `tfsdk:"color_temperature"`
@@ -49,7 +54,7 @@ type SceneResourceModel struct {
 	Id      types.String       `tfsdk:"id"`
 	Name    types.String       `tfsdk:"name"`
 	Actions []SceneActionModel `tfsdk:"actions"`
-	Group   types.Object       `tfsdk:"group"`
+	Group   ResourceReference  `tfsdk:"group"`
 }
 
 func (s *SceneResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -91,11 +96,11 @@ func (s *SceneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 							Required:    true,
 							Description: "The target type to apply the action to.",
 						},
-						"brightness": schema.Int32Attribute{
+						"brightness": schema.Float64Attribute{
 							Required:    true,
 							Description: "The brightness to apply to the target from 0 to 100",
-							Validators: []validator.Int32{
-								int32validator.Between(0, 100),
+							Validators: []validator.Float64{
+								float64validator.Between(0, 100),
 							},
 						},
 						"on": schema.BoolAttribute{
@@ -159,13 +164,66 @@ func (s *SceneResource) Configure(_ context.Context, req resource.ConfigureReque
 
 func (s *SceneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data SceneResourceModel
+
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-	if resp.Diagnostics.HasError() {
+
+	createObj := s.createSceneObject(data)
+	newObj, err := s.client.SceneService.CreateScene(ctx, createObj)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating scene",
+			"Could not create scene: "+err.Error(),
+		)
 		return
 	}
+	data.Id = types.StringValue(newObj.RID)
 
-	// Implementation depends on the API client capabilities
-	resp.Diagnostics.AddError("Not implemented", "Implementation pending")
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (s *SceneResource) createSceneObject(data SceneResourceModel) resources.SceneUpdateOrCreate {
+	actionTargets := make([]resources.ActionTarget, len(data.Actions))
+	for i, action := range data.Actions {
+		newAction := resources.Action{
+			On: &resources.On{
+				On: action.On.ValueBool(),
+			},
+			Dimming: &resources.Dimming{Brightness: action.Brightness.ValueFloat64()},
+		}
+		if action.Color != nil {
+			newAction.Color = &resources.Color{
+				XY: resources.XYCoord{
+					X: action.Color.X.ValueFloat64(),
+					Y: action.Color.Y.ValueFloat64(),
+				},
+			}
+		}
+		if action.ColorTemperature.IsNull() && action.ColorTemperature.IsUnknown() {
+			newAction.ColorTemperature = &resources.ColorTemperature{
+				Mirek: resources.KelvinToMirek(float64(action.ColorTemperature.ValueInt32())),
+			}
+		}
+		actionTarget := resources.ActionTarget{
+			Target: resources.Target{
+				Rid:   action.TargetId.ValueString(),
+				Rtype: action.TargetType.ValueString(),
+			},
+			Action: newAction,
+		}
+		actionTargets[i] = actionTarget
+	}
+
+	createObj := resources.SceneUpdateOrCreate{
+		Metadata: resources.SceneMetadata{
+			Name: data.Name.ValueString(),
+		},
+		Actions: actionTargets,
+		Group: resources.Group{
+			Rid:   data.Group.Rid.ValueString(),
+			Rtype: data.Group.Rtype.ValueString(),
+		},
+	}
+	return createObj
 }
 
 func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -186,13 +244,10 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	data.Name = types.StringValue(scene.Metadata.Name)
-	data.Group, _ = types.ObjectValue(map[string]attr.Type{
-		"rid":   types.StringType,
-		"rtype": types.StringType,
-	}, map[string]attr.Value{
-		"rid":   types.StringValue(scene.Group.Rid),
-		"rtype": types.StringValue(scene.Group.Rtype),
-	})
+	data.Group = ResourceReference{
+		Rid:   types.StringValue(scene.Group.Rid),
+		Rtype: types.StringValue(scene.Group.Rtype),
+	}
 	actions := make([]SceneActionModel, len(scene.Actions))
 	for i, action := range scene.Actions {
 		tflog.Info(ctx, "action:", map[string]interface{}{"action": action})
@@ -221,7 +276,7 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 			TargetId:         types.StringValue(action.Target.Rid),
 			TargetType:       types.StringValue(action.Target.Rtype),
 			On:               onValue,
-			Brightness:       types.Int32Value(int32(action.Action.Dimming.Brightness)),
+			Brightness:       types.Float64Value(action.Action.Dimming.Brightness),
 			Color:            color,
 			ColorTemperature: colorTemp,
 		}
@@ -247,7 +302,7 @@ func (s *SceneResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	update := resources.SceneUpdate{}
+	update := s.createSceneObject(data)
 
 	_, err := s.client.SceneService.UpdateScene(ctx, data.Id.String(), update)
 	if err != nil {
