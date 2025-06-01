@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 import "github.com/richseviora/huego/pkg/resources"
 
@@ -23,10 +24,10 @@ type ZoneResource struct {
 }
 
 type ZoneResourceModel struct {
-	ID       types.String   `json:"id"`
-	Name     types.String   `json:"name"`
-	LightIDs []types.String `json:"light_ids"`
-	Type     types.String   `json:"type"`
+	ID       types.String   `tfsdk:"id"`
+	Name     types.String   `tfsdk:"name"`
+	LightIDs []types.String `tfsdk:"light_ids"`
+	Type     types.String   `tfsdk:"type"`
 }
 
 func NewZoneResource() resource.Resource {
@@ -49,7 +50,7 @@ func (z *ZoneResource) Configure(ctx context.Context, req resource.ConfigureRequ
 }
 
 func (z *ZoneResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_scene"
+	resp.TypeName = req.ProviderTypeName + "_zone"
 }
 
 func (z *ZoneResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -96,8 +97,11 @@ func (z *ZoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		resp.Diagnostics.AddError("Error creating zone", err.Error())
 		return
 	}
+	tflog.Info(ctx, "Creation Update", map[string]interface{}{
+		"createdBody": createdBody,
+	})
 	data.ID = types.StringValue(createdBody.Data[0].RID)
-
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (z *ZoneResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -158,7 +162,7 @@ func CreateZoneBodyFromModel(model ZoneResourceModel) *resources.ZoneCreateOrUpd
 	children := make([]resources.Reference, len(model.LightIDs))
 	for i, id := range model.LightIDs {
 		children[i] = resources.Reference{
-			RID:   id.String(),
+			RID:   id.ValueString(),
 			RType: "light",
 		}
 	}

@@ -75,3 +75,9 @@ resource philips-hue_scene "bathroom_cool" {
     brightness = 100
   }]
 }
+
+resource philips-hue_zone "everything" {
+  name = "EVERYTHING"
+  type = "home"
+  light_ids = [for light in philips-hue_light.bathroom : light.id]
+}
