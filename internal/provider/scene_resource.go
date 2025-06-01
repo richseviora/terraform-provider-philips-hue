@@ -167,7 +167,7 @@ func (s *SceneResource) Create(ctx context.Context, req resource.CreateRequest, 
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
-	createObj := s.createSceneObject(data)
+	createObj := s.createSceneCreateObj(data)
 	newObj, err := s.client.SceneService.CreateScene(ctx, createObj)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -181,7 +181,34 @@ func (s *SceneResource) Create(ctx context.Context, req resource.CreateRequest, 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (s *SceneResource) createSceneObject(data SceneResourceModel) resources.SceneUpdateOrCreate {
+func (s *SceneResource) createSceneCreateObj(data SceneResourceModel) resources.SceneCreate {
+	actionTargets := s.createSceneActionObj(data)
+
+	createObj := resources.SceneCreate{
+		Metadata: resources.SceneMetadata{
+			Name: data.Name.ValueString(),
+		},
+		Actions: actionTargets,
+		Group: resources.Group{
+			Rid:   data.Group.Rid.ValueString(),
+			Rtype: data.Group.Rtype.ValueString(),
+		},
+	}
+	return createObj
+}
+
+func (s *SceneResource) createSceneUpdateObj(data SceneResourceModel) resources.SceneUpdate {
+	actionTargets := s.createSceneActionObj(data)
+
+	return resources.SceneUpdate{
+		Metadata: resources.SceneMetadata{
+			Name: data.Name.ValueString(),
+		},
+		Actions: actionTargets,
+	}
+}
+
+func (s *SceneResource) createSceneActionObj(data SceneResourceModel) []resources.ActionTarget {
 	actionTargets := make([]resources.ActionTarget, len(data.Actions))
 	for i, action := range data.Actions {
 		newAction := resources.Action{
@@ -198,7 +225,7 @@ func (s *SceneResource) createSceneObject(data SceneResourceModel) resources.Sce
 				},
 			}
 		}
-		if action.ColorTemperature.IsNull() && action.ColorTemperature.IsUnknown() {
+		if !action.ColorTemperature.IsNull() && !action.ColorTemperature.IsUnknown() {
 			newAction.ColorTemperature = &resources.ColorTemperature{
 				Mirek: resources.KelvinToMirek(float64(action.ColorTemperature.ValueInt32())),
 			}
@@ -212,18 +239,7 @@ func (s *SceneResource) createSceneObject(data SceneResourceModel) resources.Sce
 		}
 		actionTargets[i] = actionTarget
 	}
-
-	createObj := resources.SceneUpdateOrCreate{
-		Metadata: resources.SceneMetadata{
-			Name: data.Name.ValueString(),
-		},
-		Actions: actionTargets,
-		Group: resources.Group{
-			Rid:   data.Group.Rid.ValueString(),
-			Rtype: data.Group.Rtype.ValueString(),
-		},
-	}
-	return createObj
+	return actionTargets
 }
 
 func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -302,9 +318,9 @@ func (s *SceneResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		return
 	}
 
-	update := s.createSceneObject(data)
+	update := s.createSceneUpdateObj(data)
 
-	_, err := s.client.SceneService.UpdateScene(ctx, data.Id.String(), update)
+	_, err := s.client.SceneService.UpdateScene(ctx, data.Id.ValueString(), update)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating scene",
