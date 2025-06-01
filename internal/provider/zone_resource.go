@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -23,11 +25,17 @@ type ZoneResource struct {
 	client *resources.APIClient
 }
 
+type Reference struct {
+	RID   types.String `tfsdk:"rid"`
+	RType types.String `tfsdk:"rtype"`
+}
+
 type ZoneResourceModel struct {
-	ID       types.String   `tfsdk:"id"`
-	Name     types.String   `tfsdk:"name"`
-	LightIDs []types.String `tfsdk:"light_ids"`
-	Type     types.String   `tfsdk:"type"`
+	ID        types.String   `tfsdk:"id"`
+	Name      types.String   `tfsdk:"name"`
+	LightIDs  []types.String `tfsdk:"light_ids"`
+	Type      types.String   `tfsdk:"type"`
+	Reference *Reference     `tfsdk:"reference"`
 }
 
 func NewZoneResource() resource.Resource {
@@ -73,6 +81,18 @@ func (z *ZoneResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 					stringvalidator.OneOf(resources.AreaNames[:]...),
 				},
 			},
+			"reference": schema.ObjectAttribute{
+				Computed:            true,
+				Description:         "The reference of the Zone in the Hue Bridge.",
+				MarkdownDescription: "",
+				PlanModifiers: []planmodifier.Object{
+					objectplanmodifier.UseStateForUnknown(),
+				},
+				AttributeTypes: map[string]attr.Type{
+					"rid":   types.StringType,
+					"rtype": types.StringType,
+				},
+			},
 		},
 		Description: "Represents a Philips Hue zone. Lights can belong to multiple zones at once.",
 		Version:     0,
@@ -101,6 +121,10 @@ func (z *ZoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		"createdBody": createdBody,
 	})
 	data.ID = types.StringValue(createdBody.Data[0].RID)
+	data.Reference = &Reference{
+		RID:   types.StringValue(createdBody.Data[0].RID),
+		RType: types.StringValue("zone"),
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -155,6 +179,10 @@ func CreateZoneModelFromData(data *resources.ZoneData) ZoneResourceModel {
 		Name:     types.StringValue(data.Metadata.Name),
 		LightIDs: lightIds,
 		Type:     types.StringValue(data.Metadata.Archetype),
+		Reference: &Reference{
+			RID:   types.StringValue(data.ID),
+			RType: types.StringValue("zone"),
+		},
 	}
 }
 
