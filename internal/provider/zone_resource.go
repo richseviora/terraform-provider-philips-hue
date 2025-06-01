@@ -23,10 +23,10 @@ type ZoneResource struct {
 }
 
 type ZoneResourceModel struct {
-	ID       string   `json:"id"`
-	Name     string   `json:"name"`
-	LightIDs []string `json:"light_ids"`
-	Type     string   `json:"type"`
+	ID       types.String   `json:"id"`
+	Name     types.String   `json:"name"`
+	LightIDs []types.String `json:"light_ids"`
+	Type     types.String   `json:"type"`
 }
 
 func NewZoneResource() resource.Resource {
@@ -73,11 +73,8 @@ func (z *ZoneResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				},
 			},
 		},
-		Blocks:              nil,
-		Description:         "Represents a Philips Hue zone. Lights can be long to multiple zones at once.",
-		MarkdownDescription: "",
-		DeprecationMessage:  "",
-		Version:             0,
+		Description: "Represents a Philips Hue zone. Lights can belong to multiple zones at once.",
+		Version:     0,
 	}
 }
 
@@ -86,21 +83,90 @@ func (z *ZoneResource) ImportState(ctx context.Context, request resource.ImportS
 }
 
 func (z *ZoneResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var data ZoneResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	body := CreateZoneBodyFromModel(data)
+
+	createdBody, err := z.client.ZoneService.CreateZone(ctx, body)
+	if err != nil {
+		resp.Diagnostics.AddError("Error creating zone", err.Error())
+		return
+	}
+	data.ID = types.StringValue(createdBody.Data[0].RID)
+
 }
 
 func (z *ZoneResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	//TODO implement me
-	panic("implement me")
+	var data ZoneResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	zone, err := z.client.ZoneService.GetZone(ctx, data.ID.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading zone", err.Error())
+		return
+	}
+
+	data = CreateZoneModelFromData(zone)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (z *ZoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var data ZoneResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	body := CreateZoneBodyFromModel(data)
+	_, err := z.client.ZoneService.UpdateZone(ctx, data.ID.ValueString(), body)
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating Zone", err.Error())
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (z *ZoneResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	//TODO implement me
-	panic("implement me")
+	var data ZoneResourceModel
+	resp.Diagnostics.Append(resp.State.Get(ctx, &data)...)
+	id := data.ID.ValueString()
+	err := z.client.ZoneService.DeleteZone(ctx, id)
+	if err != nil {
+		resp.Diagnostics.AddError("Error deleting zone", err.Error())
+	}
+}
+
+func CreateZoneModelFromData(data *resources.ZoneData) ZoneResourceModel {
+	lightIds := make([]types.String, len(data.Children))
+	for i, child := range data.Children {
+		lightIds[i] = types.StringValue(child.RID)
+	}
+	return ZoneResourceModel{
+		ID:       types.StringValue(data.ID),
+		Name:     types.StringValue(data.Metadata.Name),
+		LightIDs: lightIds,
+		Type:     types.StringValue(data.Metadata.Archetype),
+	}
+}
+
+func CreateZoneBodyFromModel(model ZoneResourceModel) *resources.ZoneCreateOrUpdate {
+	children := make([]resources.Reference, len(model.LightIDs))
+	for i, id := range model.LightIDs {
+		children[i] = resources.Reference{
+			RID:   id.String(),
+			RType: "light",
+		}
+	}
+	return &resources.ZoneCreateOrUpdate{
+		Children: children,
+		Metadata: resources.ZoneMetadata{
+			Name:      model.Name.ValueString(),
+			Archetype: model.Type.ValueString(),
+		},
+	}
 }
