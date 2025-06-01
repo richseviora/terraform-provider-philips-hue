@@ -83,7 +83,7 @@ func (s *SceneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					"rtype": types.StringType,
 				},
 			},
-			"actions": schema.SetNestedAttribute{
+			"actions": schema.ListNestedAttribute{
 				Required:    true,
 				Description: "The actions and targets to perform when the scene is triggered.",
 				NestedObject: schema.NestedAttributeObject{
@@ -227,7 +227,7 @@ func (s *SceneResource) createSceneActionObj(data SceneResourceModel) []resource
 		}
 		if !action.ColorTemperature.IsNull() && !action.ColorTemperature.IsUnknown() {
 			newAction.ColorTemperature = &resources.ColorTemperature{
-				Mirek: resources.KelvinToMirek(float64(action.ColorTemperature.ValueInt32())),
+				Mirek: int(resources.KelvinToMirekRounded(int32(action.ColorTemperature.ValueInt32()))),
 			}
 		}
 		actionTarget := resources.ActionTarget{
@@ -275,7 +275,7 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		var colorTemp types.Int32
 		if action.Action.ColorTemperature != nil {
 			mirek := action.Action.ColorTemperature.Mirek
-			kelvin := resources.MirekToKelvin(float64(mirek))
+			kelvin := resources.MirekToKelvinRounded(int32(mirek))
 			colorTemp = types.Int32Value(int32(kelvin))
 			tflog.Info(ctx, "colorTemp:", map[string]interface{}{"colorTemp": colorTemp.String(), "originalColorTemp": kelvin})
 		}
