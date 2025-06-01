@@ -8,6 +8,7 @@ require (
 	github.com/hashicorp/terraform-plugin-go v0.26.0
 	github.com/hashicorp/terraform-plugin-log v0.9.0
 	github.com/hashicorp/terraform-plugin-testing v1.12.0
+	github.com/nuqz/col2xy v0.0.0-20221125003613-126b82d0da87
 	github.com/richseviora/huego v0.0.0-20250513183301-71746e91c365
 )
 

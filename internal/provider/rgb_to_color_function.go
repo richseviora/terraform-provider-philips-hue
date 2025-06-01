@@ -39,9 +39,8 @@ func (R RGBToColorFunction) Definition(_ context.Context, request function.Defin
 		},
 		Return: function.ObjectReturn{
 			AttributeTypes: map[string]attr.Type{
-				"x":          types.Float32Type,
-				"y":          types.Float32Type,
-				"brightness": types.Int32Type,
+				"x": types.Float32Type,
+				"y": types.Float32Type,
 			},
 			CustomType: nil,
 		},
@@ -56,19 +55,17 @@ func (R RGBToColorFunction) Run(ctx context.Context, request function.RunRequest
 	if response.Error != nil {
 		return
 	}
-	coord, lum := resources.RGBToXY(resources.RGBColor{
+	coord := resources.RGBtoXY2(resources.RGBColor{
 		R: int(red),
 		G: int(green),
 		B: int(blue),
 	})
 	output := struct {
-		X          types.Float32 `tfsdk:"x"`
-		Y          types.Float32 `tfsdk:"y"`
-		Brightness types.Int32   `tfsdk:"brightness"`
+		X types.Float32 `tfsdk:"x"`
+		Y types.Float32 `tfsdk:"y"`
 	}{
-		X:          types.Float32Value(float32(coord.X)),
-		Y:          types.Float32Value(float32(coord.Y)),
-		Brightness: types.Int32Value(int32(lum)),
+		X: types.Float32Value(float32(coord.X)),
+		Y: types.Float32Value(float32(coord.Y)),
 	}
 	response.Error = function.ConcatFuncErrors(response.Result.Set(ctx, output))
 }

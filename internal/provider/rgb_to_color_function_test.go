@@ -31,9 +31,8 @@ func TestRGBToColorFunction_White(t *testing.T) {
 					statecheck.ExpectKnownOutputValue(
 						"test",
 						knownvalue.MapExact(map[string]knownvalue.Check{
-							"x":          knownvalue.Float32Exact(0.31271592),
-							"y":          knownvalue.Float32Exact(0.3290015),
-							"brightness": knownvalue.Int32Exact(100),
+							"x": knownvalue.Float32Exact(0.3125),
+							"y": knownvalue.Float32Exact(0.32894737),
 						}),
 					),
 				},
@@ -60,9 +59,8 @@ func TestRGBToColorFunction_Red(t *testing.T) {
 					statecheck.ExpectKnownOutputValue(
 						"test",
 						knownvalue.MapExact(map[string]knownvalue.Check{
-							"x":          knownvalue.Float32Exact(0.6400745),
-							"y":          knownvalue.Float32Exact(0.3299705),
-							"brightness": knownvalue.Int32Exact(21),
+							"x": knownvalue.Float32Exact(0.735),
+							"y": knownvalue.Float32Exact(0.265),
 						}),
 					),
 				},
