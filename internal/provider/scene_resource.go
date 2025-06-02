@@ -55,7 +55,7 @@ type SceneResourceModel struct {
 	Id      types.String       `tfsdk:"id"`
 	Name    types.String       `tfsdk:"name"`
 	Actions []SceneActionModel `tfsdk:"actions"`
-	Group   ResourceReference  `tfsdk:"group"`
+	Group   *ResourceReference `tfsdk:"group"`
 }
 
 func (s *SceneResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -256,6 +256,10 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	scene, err := s.client.SceneService.GetScene(ctx, data.Id.ValueString())
 	tfsdklog.Info(ctx, "scene:", map[string]interface{}{"scene": scene})
 	if err != nil {
+		if err.Error() == "Not Found" {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError(
 			"Error reading scene",
 			"Could not read scene ID "+data.Id.ValueString()+": "+err.Error(),
@@ -264,7 +268,7 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 
 	data.Name = types.StringValue(scene.Metadata.Name)
-	data.Group = ResourceReference{
+	data.Group = &ResourceReference{
 		Rid:   types.StringValue(scene.Group.Rid),
 		Rtype: types.StringValue(scene.Group.Rtype),
 	}
@@ -337,7 +341,19 @@ func (s *SceneResource) Update(ctx context.Context, req resource.UpdateRequest, 
 }
 
 func (s *SceneResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	resp.Diagnostics.AddError("Not implemented", "Delete is not supported for this resource. Please delete the scene from the app instead.")
+	var data SceneResourceModel
+	resp.Diagnostics.Append(resp.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	id := data.Id.ValueString()
+	err := s.client.SceneService.DeleteScene(ctx, id)
+	if err != nil {
+		if err.Error() == "Not Found" {
+			return
+		}
+		resp.Diagnostics.AddError("Error deleting zone", err.Error())
+	}
 }
 
 func (s *SceneResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

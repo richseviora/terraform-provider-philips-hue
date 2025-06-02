@@ -35,7 +35,7 @@ type PhilipsHueProviderModel struct {
 }
 
 func (p *PhilipsHueProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "philips_hue"
+	resp.TypeName = "philips"
 	resp.Version = p.version
 }
 

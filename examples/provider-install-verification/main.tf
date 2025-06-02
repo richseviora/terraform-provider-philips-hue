@@ -1,12 +1,12 @@
 terraform {
   required_providers {
-    philips-hue = {
+    philips = {
       source = "hashicorp.com/edu/philips-hue"
     }
   }
 }
 
-provider "philips-hue" {}
+provider "philips" {}
 
 locals {
   bathroom_lights = [
@@ -20,42 +20,37 @@ locals {
 }
 
 import {
-  to = philips-hue_room.bathroom
+  to = philips_room.bathroom
   id = "0d960eab-68c6-4ed7-8c0d-a24ca756d58e"
 }
 
 import {
-  to = philips-hue_scene.bathroom_bright
+  to = philips_scene.bathroom_bright
   id = "68b39f81-1c15-4c82-bd0b-ab28606f3d2e"
 }
 
 import {
   for_each = local.bathroom_lights
-  to = philips-hue_light.bathroom[each.key]
+  to = philips_light.bathroom[each.key]
   id = each.value
 }
 
-resource philips-hue_light "first_light" {
-  name     = "Hallway Lamp"
-  function = "decorative"
-}
-
-resource philips-hue_light "bathroom" {
+resource philips_light "bathroom" {
   count    = 6
   name     = "Bathroom ${count.index + 1}"
   function = "functional"
 }
 
-resource philips-hue_room "bathroom" {
+resource philips_room "bathroom" {
   name      = "Bathroom"
   archetype = "bathroom"
-  device_ids = philips-hue_light.bathroom[*].device_id
+  device_ids = philips_light.bathroom[*].device_id
 }
 
-resource philips-hue_scene "bathroom_bright" {
-  group = philips-hue_room.bathroom.reference
+resource philips_scene "bathroom_bright" {
+  group = philips_room.bathroom.reference
   name = "Bright"
-  actions = [for light in philips-hue_light.bathroom : {
+  actions = [for light in philips_light.bathroom : {
     target_id = light.id
     target_type = "light"
     on = true
@@ -64,10 +59,10 @@ resource philips-hue_scene "bathroom_bright" {
   }]
 }
 
-resource philips-hue_scene "bathroom_cool" {
-  group = philips-hue_room.bathroom.reference
+resource philips_scene "bathroom_cool" {
+  group = philips_room.bathroom.reference
   name = "Bathroom Cold"
-  actions = [for light in philips-hue_light.bathroom : {
+  actions = [for light in philips_light.bathroom : {
     target_id = light.id
     target_type = "light"
     on = true
@@ -76,8 +71,8 @@ resource philips-hue_scene "bathroom_cool" {
   }]
 }
 
-resource philips-hue_zone "everything" {
+resource philips_zone "everything" {
   name = "EVERYTHING"
   type = "home"
-  light_ids = [for light in philips-hue_light.bathroom : light.id]
+  light_ids = [for light in philips_light.bathroom : light.id]
 }

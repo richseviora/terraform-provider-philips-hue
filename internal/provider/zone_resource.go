@@ -35,7 +35,7 @@ type ZoneResourceModel struct {
 	Name      types.String   `tfsdk:"name"`
 	LightIDs  []types.String `tfsdk:"light_ids"`
 	Type      types.String   `tfsdk:"type"`
-	Reference *Reference     `tfsdk:"reference"`
+	Reference types.Object   `tfsdk:"reference"`
 }
 
 func NewZoneResource() resource.Resource {
@@ -107,6 +107,7 @@ func (z *ZoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 	var data ZoneResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
+		tflog.Error(ctx, "failed to populate record")
 		return
 	}
 
@@ -121,11 +122,15 @@ func (z *ZoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		"createdBody": createdBody,
 	})
 	data.ID = types.StringValue(createdBody.Data[0].RID)
-	data.Reference = &Reference{
-		RID:   types.StringValue(createdBody.Data[0].RID),
-		RType: types.StringValue("zone"),
-	}
+	data.Reference, _ = types.ObjectValue(map[string]attr.Type{
+		"rid":   types.StringType,
+		"rtype": types.StringType,
+	}, map[string]attr.Value{
+		"rid":   types.StringValue(createdBody.Data[0].RID),
+		"rtype": types.StringValue("room"),
+	})
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+
 }
 
 func (z *ZoneResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -135,7 +140,12 @@ func (z *ZoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 	zone, err := z.client.ZoneService.GetZone(ctx, data.ID.ValueString())
+
 	if err != nil {
+		if err.Error() == "Not Found" {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("Error reading zone", err.Error())
 		return
 	}
@@ -159,12 +169,17 @@ func (z *ZoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 }
 
 func (z *ZoneResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	//TODO implement me
 	var data ZoneResourceModel
 	resp.Diagnostics.Append(resp.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	id := data.ID.ValueString()
 	err := z.client.ZoneService.DeleteZone(ctx, id)
 	if err != nil {
+		if err.Error() == "Not Found" {
+			return
+		}
 		resp.Diagnostics.AddError("Error deleting zone", err.Error())
 	}
 }
@@ -174,15 +189,19 @@ func CreateZoneModelFromData(data *resources.ZoneData) ZoneResourceModel {
 	for i, child := range data.Children {
 		lightIds[i] = types.StringValue(child.RID)
 	}
+	reference, _ := types.ObjectValue(map[string]attr.Type{
+		"rid":   types.StringType,
+		"rtype": types.StringType,
+	}, map[string]attr.Value{
+		"rid":   types.StringValue(data.ID),
+		"rtype": types.StringValue("room"),
+	})
 	return ZoneResourceModel{
-		ID:       types.StringValue(data.ID),
-		Name:     types.StringValue(data.Metadata.Name),
-		LightIDs: lightIds,
-		Type:     types.StringValue(data.Metadata.Archetype),
-		Reference: &Reference{
-			RID:   types.StringValue(data.ID),
-			RType: types.StringValue("zone"),
-		},
+		ID:        types.StringValue(data.ID),
+		Name:      types.StringValue(data.Metadata.Name),
+		LightIDs:  lightIds,
+		Type:      types.StringValue(data.Metadata.Archetype),
+		Reference: reference,
 	}
 }
 

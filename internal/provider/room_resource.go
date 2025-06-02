@@ -160,6 +160,10 @@ func (r *RoomResource) Read(ctx context.Context, request resource.ReadRequest, r
 
 	room, err := r.client.RoomService.GetRoom(ctx, data.Id.ValueString())
 	if err != nil {
+		if err.Error() == "Not Found" {
+			response.State.RemoveResource(ctx)
+			return
+		}
 		response.Diagnostics.AddError(
 			"Error reading room",
 			"Could not read room ID "+data.Id.ValueString()+": "+err.Error())
@@ -234,14 +238,13 @@ func (r *RoomResource) Delete(ctx context.Context, request resource.DeleteReques
 	if response.Diagnostics.HasError() {
 		return
 	}
-
-	err := fmt.Errorf("Not implemented")
-	//err := r.client.RoomService.DeleteRoom(ctx, data.Id.ValueString())
+	id := data.Id.ValueString()
+	err := r.client.RoomService.DeleteRoom(ctx, id)
 	if err != nil {
-		response.Diagnostics.AddError(
-			"Error deleting room",
-			"Could not delete room ID "+data.Id.ValueString()+": "+err.Error())
-		return
+		if err.Error() == "Not Found" {
+			return
+		}
+		response.Diagnostics.AddError("Error deleting zone", err.Error())
 	}
 }
 
