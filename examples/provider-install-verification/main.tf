@@ -59,7 +59,7 @@ resource philips-hue_scene "bathroom_bright" {
     target_id = light.id
     target_type = "light"
     on = true
-    color_temperature = 2702
+    color_temperature = 2700
     brightness = 100
   }]
 }
