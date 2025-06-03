@@ -304,14 +304,9 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		actions[i] = model
 	}
 
-	tflog.Info(ctx, "actions:", map[string]interface{}{"actions": actions})
+	tflog.Trace(ctx, "actions:", map[string]interface{}{"actions": actions})
 
 	data.Actions = actions
-	for _, action := range data.Actions {
-		tflog.Info(ctx, "RETURN action:", map[string]interface{}{"target_id": action.TargetId.ValueString()})
-	}
-	// TODO: Populate actions
-
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
