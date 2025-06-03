@@ -46,27 +46,20 @@ func (r *RoomResource) Schema(ctx context.Context, request resource.SchemaReques
 		MarkdownDescription: "A representation of a Philips Hue room.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:            true,
-				Description:         "The UUID of the Room in the Hue Bridge.",
-				MarkdownDescription: "",
+				Computed:    true,
+				Description: "The UUID of the Room in the Hue Bridge.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
-				Required:            true,
-				Description:         "The name of the Room in the Hue Bridge.",
-				MarkdownDescription: "",
+				Required:    true,
+				Description: "The name of the Room in the Hue Bridge.",
 			},
 			"device_ids": schema.SetAttribute{
-				ElementType:         types.StringType,
-				Required:            true,
-				Description:         "The Device IDs to assign to the Room in the Hue Bridge.",
-				MarkdownDescription: "",
-				DeprecationMessage:  "",
-				Validators:          []validator.Set{},
-				PlanModifiers:       nil,
-				Default:             nil,
+				ElementType: types.StringType,
+				Required:    true,
+				Description: "The Device IDs to assign to the Room in the Hue Bridge. Lights should not be assigned to multiple rooms at once.",
 			},
 			"archetype": schema.StringAttribute{
 				Required: true,
