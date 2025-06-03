@@ -18,6 +18,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-log/tfsdklog"
 	"github.com/richseviora/huego/pkg/resources"
+	"github.com/richseviora/huego/pkg/resources/color"
+	"github.com/richseviora/huego/pkg/resources/common"
 )
 
 var _ resource.Resource = &SceneResource{}
@@ -219,11 +221,11 @@ func (s *SceneResource) createSceneActionObj(data SceneResourceModel) []resource
 			On: &resources.On{
 				On: action.On.ValueBool(),
 			},
-			Dimming: &resources.Dimming{Brightness: action.Brightness.ValueFloat64()},
+			Dimming: &common.Dimming{Brightness: action.Brightness.ValueFloat64()},
 		}
 		if action.Color != nil {
 			newAction.Color = &resources.Color{
-				XY: resources.XYCoord{
+				XY: common.XYCoord{
 					X: action.Color.X.ValueFloat64(),
 					Y: action.Color.Y.ValueFloat64(),
 				},
@@ -231,7 +233,7 @@ func (s *SceneResource) createSceneActionObj(data SceneResourceModel) []resource
 		}
 		if !action.ColorTemperature.IsNull() && !action.ColorTemperature.IsUnknown() {
 			newAction.ColorTemperature = &resources.ColorTemperature{
-				Mirek: int(resources.KelvinToMirekRounded(int32(action.ColorTemperature.ValueInt32()))),
+				Mirek: int(color.KelvinToMirekRounded(int32(action.ColorTemperature.ValueInt32()))),
 			}
 		}
 		actionTarget := resources.ActionTarget{
@@ -274,18 +276,15 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 	actions := make([]SceneActionModel, len(scene.Actions))
 	for i, action := range scene.Actions {
-		tflog.Info(ctx, "action:", map[string]interface{}{"action": action})
 		var onValue types.Bool
 		if action.Action.On != nil {
 			onValue = types.BoolValue(action.Action.On.On)
-			tflog.Info(ctx, "onValue:", map[string]interface{}{"onValue": onValue})
 		}
 		var colorTemp types.Int32
 		if action.Action.ColorTemperature != nil {
 			mirek := action.Action.ColorTemperature.Mirek
-			kelvin := resources.MirekToKelvinRounded(int32(mirek))
+			kelvin := color.MirekToKelvinRounded(int32(mirek))
 			colorTemp = types.Int32Value(int32(kelvin))
-			tflog.Info(ctx, "colorTemp:", map[string]interface{}{"colorTemp": colorTemp.String(), "originalColorTemp": kelvin})
 		}
 		var color *SceneActionColorModel
 		if action.Action.Color != nil {
@@ -293,8 +292,6 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 				X: types.Float64Value(action.Action.Color.XY.X),
 				Y: types.Float64Value(action.Action.Color.XY.Y),
 			}
-			tflog.Info(ctx, "color:", map[string]interface{}{"color": color})
-			fmt.Println(color)
 		}
 		model := SceneActionModel{
 			TargetId:         types.StringValue(action.Target.Rid),
@@ -304,7 +301,6 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 			Color:            color,
 			ColorTemperature: colorTemp,
 		}
-		tflog.Info(ctx, "writing action:", map[string]interface{}{"action": model})
 		actions[i] = model
 	}
 
