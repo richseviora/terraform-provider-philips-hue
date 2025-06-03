@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -14,8 +15,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/richseviora/huego/pkg/resources"
+	"github.com/richseviora/huego/pkg/resources/common"
 )
-import "github.com/richseviora/huego/pkg/resources"
 
 var _ resource.Resource = &ZoneResource{}
 var _ resource.ResourceWithConfigure = &ZoneResource{}
@@ -206,9 +209,9 @@ func CreateZoneModelFromData(data *resources.ZoneData) ZoneResourceModel {
 }
 
 func CreateZoneBodyFromModel(model ZoneResourceModel) *resources.ZoneCreateOrUpdate {
-	children := make([]resources.Reference, len(model.LightIDs))
+	children := make([]common.Reference, len(model.LightIDs))
 	for i, id := range model.LightIDs {
-		children[i] = resources.Reference{
+		children[i] = common.Reference{
 			RID:   id.ValueString(),
 			RType: "light",
 		}

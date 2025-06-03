@@ -2,10 +2,12 @@ package provider
 
 import (
 	"context"
+
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/richseviora/huego/pkg/resources"
+
+	"github.com/richseviora/huego/pkg/resources/color"
 )
 
 var (
@@ -55,7 +57,7 @@ func (R RGBToColorFunction) Run(ctx context.Context, request function.RunRequest
 	if response.Error != nil {
 		return
 	}
-	coord := resources.RGBtoXY2(resources.RGBColor{
+	coord := color.RGBtoXY2(color.RGBColor{
 		R: int(red),
 		G: int(green),
 		B: int(blue),

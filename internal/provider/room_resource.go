@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/richseviora/huego/pkg/resources"
+	"github.com/richseviora/huego/pkg/resources/common"
 )
 
 var _ resource.Resource = &RoomResource{}
@@ -116,11 +117,11 @@ func (r *RoomResource) Create(ctx context.Context, request resource.CreateReques
 		return
 	}
 
-	children := make([]resources.Child, len(data.DeviceIds.Elements()))
+	children := make([]common.Reference, len(data.DeviceIds.Elements()))
 	for _, deviceId := range data.DeviceIds.Elements() {
-		children = append(children, resources.Child{
-			Rid:   deviceId.String(),
-			Rtype: "light",
+		children = append(children, common.Reference{
+			RID:   deviceId.String(),
+			RType: "light",
 		})
 	}
 
@@ -182,7 +183,7 @@ func (r *RoomResource) Read(ctx context.Context, request resource.ReadRequest, r
 	})
 	deviceIds := make([]string, len(room.Children))
 	for i, child := range room.Children {
-		deviceIds[i] = child.Rid
+		deviceIds[i] = child.RID
 	}
 	data.DeviceIds, _ = types.SetValueFrom(ctx, types.StringType, deviceIds)
 
@@ -204,11 +205,11 @@ func (r *RoomResource) Update(ctx context.Context, request resource.UpdateReques
 		return
 	}
 
-	children := make([]resources.Child, len(data.DeviceIds.Elements()))
+	children := make([]common.Reference, len(data.DeviceIds.Elements()))
 	for _, deviceId := range data.DeviceIds.Elements() {
-		children = append(children, resources.Child{
-			Rid:   deviceId.String(),
-			Rtype: "light",
+		children = append(children, common.Reference{
+			RID:   deviceId.String(),
+			RType: "light",
 		})
 	}
 
