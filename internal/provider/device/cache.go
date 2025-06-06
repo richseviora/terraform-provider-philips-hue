@@ -10,9 +10,11 @@ import (
 	"github.com/richseviora/huego/pkg/resources/scene"
 	"github.com/richseviora/huego/pkg/resources/zigbee_connectivity"
 	"github.com/richseviora/huego/pkg/resources/zone"
+	"sync"
 )
 
 type DeviceMappingEntry struct {
+	Name                 string
 	DeviceID             string
 	LightID              string
 	ZigbeeConnectivityID string
@@ -23,6 +25,7 @@ type ClientWithCache struct {
 	client     client.HueServiceClient
 	cache      map[string]DeviceMappingEntry
 	cacheBuilt bool
+	mutex      sync.Mutex
 }
 
 func NewClientWithCache(client client.HueServiceClient) *ClientWithCache {
@@ -46,6 +49,7 @@ func (c *ClientWithCache) BuildDeviceMap(ctx context.Context) (map[string]Device
 	for _, d := range devices.Data {
 		entry := DeviceMappingEntry{
 			DeviceID: d.ID,
+			Name:     d.Metadata.Name,
 		}
 
 		for _, service := range d.Services {
@@ -68,6 +72,8 @@ func (c *ClientWithCache) BuildDeviceMap(ctx context.Context) (map[string]Device
 }
 
 func (c *ClientWithCache) GetLightIDForMacAddress(macAddress string) (string, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	if !c.cacheBuilt {
 		deviceMap, err := c.BuildDeviceMap(context.Background())
 		if err != nil {
@@ -84,31 +90,49 @@ func (c *ClientWithCache) GetLightIDForMacAddress(macAddress string) (string, er
 	return "", errors.New("could not find Mac Address in cache: " + macAddress + "")
 }
 
+func (c *ClientWithCache) GetAllDevices() ([]DeviceMappingEntry, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if !c.cacheBuilt {
+		deviceMap, err := c.BuildDeviceMap(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		c.cache = deviceMap
+		c.cacheBuilt = true
+	}
+	devices := make([]DeviceMappingEntry, 0)
+	for _, d := range c.cache {
+		devices = append(devices, d)
+	}
+	return devices, nil
+}
+
 var (
 	_ client.HueServiceClient = &ClientWithCache{}
 )
 
-func (c ClientWithCache) ZoneService() zone.ZoneService {
+func (c *ClientWithCache) ZoneService() zone.ZoneService {
 	return c.client.ZoneService()
 }
 
-func (c ClientWithCache) RoomService() room.RoomService {
+func (c *ClientWithCache) RoomService() room.RoomService {
 	return c.client.RoomService()
 }
 
-func (c ClientWithCache) SceneService() scene.SceneService {
+func (c *ClientWithCache) SceneService() scene.SceneService {
 	return c.client.SceneService()
 }
 
-func (c ClientWithCache) LightService() light.LightService {
+func (c *ClientWithCache) LightService() light.LightService {
 	return c.client.LightService()
 }
 
-func (c ClientWithCache) DeviceService() device.Service {
+func (c *ClientWithCache) DeviceService() device.Service {
 	return c.client.DeviceService()
 }
 
-func (c ClientWithCache) ZigbeeConnectivityService() zigbee_connectivity.Service {
+func (c *ClientWithCache) ZigbeeConnectivityService() zigbee_connectivity.Service {
 	return c.client.ZigbeeConnectivityService()
 }
 

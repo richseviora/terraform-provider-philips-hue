@@ -32,7 +32,8 @@ type PhilipsHueProvider struct {
 
 // PhilipsHueProviderModel describes the provider data model.
 type PhilipsHueProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
+	Endpoint      types.String `tfsdk:"endpoint"`
+	OutputImports types.Bool   `tfsdk:"output_imports"`
 }
 
 func (p *PhilipsHueProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -47,6 +48,10 @@ func (p *PhilipsHueProvider) Schema(ctx context.Context, req provider.SchemaRequ
 				MarkdownDescription: "NOT IMPLEMENTED YET - The Philips Hue bridge IP address. Example: `192.168.1.100` or `philips-hue.local`.",
 				Optional:            true,
 			},
+			"output_imports": schema.BoolAttribute{
+				MarkdownDescription: "Whether the provider will output the import state for resources. Defaults to `false`.",
+				Optional:            true,
+			},
 		},
 	}
 }
@@ -55,21 +60,27 @@ func (p *PhilipsHueProvider) Configure(ctx context.Context, req provider.Configu
 	var data PhilipsHueProviderModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
-
-	// Example client configuration for data sources and resources
 	client, err := pkg.NewClientFromMDNS()
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create client, got error: %s", err))
 		return
 	}
-	resp.DataSourceData = device.NewClientWithCache(client)
+
+	clientWithCache := device.NewClientWithCache(client)
+	if data.OutputImports.ValueBool() {
+		devices, err := clientWithCache.GetAllDevices()
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get devices, got error: %s", err))
+		} else {
+			resp.Diagnostics.AddWarning("Imports", generateImportOutput(devices))
+		}
+	}
+
+	resp.DataSourceData = clientWithCache
 	resp.ResourceData = client
 }
 
@@ -106,4 +117,18 @@ func New(version string) func() provider.Provider {
 			version: version,
 		}
 	}
+}
+
+func generateImportOutput(entries []device.DeviceMappingEntry) string {
+	result := ""
+	for _, entry := range entries {
+		result += fmt.Sprintf(`
+import {
+  \\ Name = %s
+  id = "%s"
+  to = "philips_hue_light.REPLACE_ME"
+}
+`, entry.Name, entry.MacAddress)
+	}
+	return result
 }
