@@ -13,8 +13,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/richseviora/huego/pkg/resources"
+	"github.com/richseviora/huego/pkg/resources/client"
 	"github.com/richseviora/huego/pkg/resources/common"
+	room2 "github.com/richseviora/huego/pkg/resources/room"
 )
 
 var _ resource.Resource = &RoomResource{}
@@ -26,7 +27,7 @@ func NewRoomResource() resource.Resource {
 }
 
 type RoomResource struct {
-	client *resources.APIClient
+	client client.HueServiceClient
 }
 
 type RoomResourceModel struct {
@@ -64,7 +65,7 @@ func (r *RoomResource) Schema(ctx context.Context, request resource.SchemaReques
 			"archetype": schema.StringAttribute{
 				Required: true,
 				Validators: []validator.String{
-					stringvalidator.OneOf(resources.AreaNames[:]...),
+					stringvalidator.OneOf(common.AreaNames[:]...),
 				},
 			},
 			"reference": schema.ObjectAttribute{
@@ -87,10 +88,10 @@ func (r *RoomResource) Configure(ctx context.Context, request resource.Configure
 	if request.ProviderData == nil {
 		return
 	}
-	client, ok := request.ProviderData.(*resources.APIClient)
+	client, ok := request.ProviderData.(client.HueServiceClient)
 	if !ok {
 		response.Diagnostics.AddError("Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *resources.APIClient, got: %T. Please report this issue to the provider developers.", request.ProviderData))
+			fmt.Sprintf("Expected client.HueServiceClient, got: %T. Please report this issue to the provider developers.", request.ProviderData))
 	}
 	r.client = client
 }
@@ -102,7 +103,7 @@ func (r *RoomResource) Create(ctx context.Context, request resource.CreateReques
 		return
 	}
 
-	area, err := resources.ParseArea(data.Archetype.ValueString())
+	area, err := common.ParseArea(data.Archetype.ValueString())
 	if err != nil {
 		response.Diagnostics.AddError(
 			"Error parsing room archetype",
@@ -118,15 +119,15 @@ func (r *RoomResource) Create(ctx context.Context, request resource.CreateReques
 		})
 	}
 
-	room := resources.RoomCreate{
-		Metadata: resources.RoomMetadata{
+	room := room2.RoomCreate{
+		Metadata: room2.RoomMetadata{
 			Name:      data.Name.ValueString(),
 			Archetype: area,
 		},
 		Children: children,
 	}
 
-	createdRoom, err := r.client.RoomService.CreateRoom(ctx, room)
+	createdRoom, err := r.client.RoomService().CreateRoom(ctx, room)
 	if err != nil {
 		response.Diagnostics.AddError(
 			"Error creating room",
@@ -152,7 +153,7 @@ func (r *RoomResource) Read(ctx context.Context, request resource.ReadRequest, r
 		return
 	}
 
-	room, err := r.client.RoomService.GetRoom(ctx, data.Id.ValueString())
+	room, err := r.client.RoomService().GetRoom(ctx, data.Id.ValueString())
 	if err != nil {
 		if err.Error() == "Not Found" {
 			response.State.RemoveResource(ctx)
@@ -190,7 +191,7 @@ func (r *RoomResource) Update(ctx context.Context, request resource.UpdateReques
 		return
 	}
 
-	area, err := resources.ParseArea(data.Archetype.ValueString())
+	area, err := common.ParseArea(data.Archetype.ValueString())
 	if err != nil {
 		response.Diagnostics.AddError(
 			"Error parsing room archetype",
@@ -206,16 +207,16 @@ func (r *RoomResource) Update(ctx context.Context, request resource.UpdateReques
 		})
 	}
 
-	update := resources.RoomUpdate{
+	update := room2.RoomUpdate{
 		ID: data.Id.ValueString(),
-		Metadata: &resources.RoomMetadata{
+		Metadata: &room2.RoomMetadata{
 			Name:      data.Name.ValueString(),
 			Archetype: area,
 		},
 		Children: &children,
 	}
 
-	err = r.client.RoomService.UpdateRoom(ctx, update)
+	err = r.client.RoomService().UpdateRoom(ctx, update)
 	if err != nil {
 		response.Diagnostics.AddError(
 			"Error updating room",
@@ -233,7 +234,7 @@ func (r *RoomResource) Delete(ctx context.Context, request resource.DeleteReques
 		return
 	}
 	id := data.Id.ValueString()
-	err := r.client.RoomService.DeleteRoom(ctx, id)
+	err := r.client.RoomService().DeleteRoom(ctx, id)
 	if err != nil {
 		if err.Error() == "Not Found" {
 			return

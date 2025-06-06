@@ -12,7 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/richseviora/huego/pkg/resources"
+	"github.com/richseviora/huego/pkg/resources/client"
+	"github.com/richseviora/huego/pkg/resources/light"
 )
 
 var _ resource.Resource = &LightResource{}
@@ -20,7 +21,7 @@ var _ resource.ResourceWithImportState = &LightResource{}
 var _ resource.ResourceWithConfigure = &LightResource{}
 
 type LightResource struct {
-	client *resources.APIClient
+	client client.HueServiceClient
 }
 
 type LightResourceModel struct {
@@ -31,6 +32,10 @@ type LightResourceModel struct {
 	// Archetype types.String `tfsdk:"archetype"`
 	// TODO: Add power-on attributes
 
+}
+
+func NewLightResource() resource.Resource {
+	return &LightResource{}
 }
 
 func (l *LightResource) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -83,10 +88,10 @@ func (l *LightResource) Configure(ctx context.Context, request resource.Configur
 	if request.ProviderData == nil {
 		return
 	}
-	client, ok := request.ProviderData.(*resources.APIClient)
+	client, ok := request.ProviderData.(client.HueServiceClient)
 	if !ok {
 		response.Diagnostics.AddError("Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *resources.APIClient, got: %T. Please report this issue to the provider developers.", request.ProviderData))
+			fmt.Sprintf("Expected client.HueServiceClient, got: %T. Please report this issue to the provider developers.", request.ProviderData))
 	}
 	l.client = client
 }
@@ -102,7 +107,7 @@ func (l *LightResource) Read(ctx context.Context, request resource.ReadRequest, 
 	if response.Diagnostics.HasError() {
 		return
 	}
-	light, err := l.client.LightService.GetLight(ctx, data.Id.ValueString())
+	light, err := l.client.LightService().GetLight(ctx, data.Id.ValueString())
 	tflog.Info(ctx, "Returning Value", map[string]interface{}{"light": light, "err": err, "id": data.Id.ValueString()})
 	if err != nil {
 		response.Diagnostics.AddError(
@@ -145,12 +150,12 @@ func (l *LightResource) Update(ctx context.Context, request resource.UpdateReque
 		update.Function = data.Function.ValueStringPointer()
 	}
 
-	lightUpdate := resources.LightUpdate{
+	lightUpdate := light.LightUpdate{
 		ID:       data.Id.ValueString(),
 		Metadata: &update,
 	}
 	tflog.Info(ctx, "Updating Light", map[string]interface{}{"id": data.Id.ValueString(), "light": lightUpdate})
-	err := l.client.LightService.UpdateLight(ctx, lightUpdate)
+	err := l.client.LightService().UpdateLight(ctx, lightUpdate)
 
 	tflog.Info(ctx, "Returning Updated Light", map[string]interface{}{"err": err, "id": data.Id.ValueString()})
 

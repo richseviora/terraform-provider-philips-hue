@@ -17,9 +17,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-log/tfsdklog"
-	"github.com/richseviora/huego/pkg/resources"
+	client2 "github.com/richseviora/huego/pkg/resources/client"
 	"github.com/richseviora/huego/pkg/resources/color"
 	"github.com/richseviora/huego/pkg/resources/common"
+	"github.com/richseviora/huego/pkg/resources/light"
+	"github.com/richseviora/huego/pkg/resources/scene"
 )
 
 var _ resource.Resource = &SceneResource{}
@@ -31,7 +33,7 @@ func NewSceneResource() resource.Resource {
 }
 
 type SceneResource struct {
-	client *resources.APIClient
+	client client2.HueServiceClient
 }
 
 type SceneActionColorModel struct {
@@ -157,7 +159,7 @@ func (s *SceneResource) Configure(_ context.Context, req resource.ConfigureReque
 	if req.ProviderData == nil {
 		return
 	}
-	client, ok := req.ProviderData.(*resources.APIClient)
+	client, ok := req.ProviderData.(client2.HueServiceClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
@@ -174,7 +176,7 @@ func (s *SceneResource) Create(ctx context.Context, req resource.CreateRequest, 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 
 	createObj := s.createSceneCreateObj(data)
-	newObj, err := s.client.SceneService.CreateScene(ctx, createObj)
+	newObj, err := s.client.SceneService().CreateScene(ctx, createObj)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating scene",
@@ -187,57 +189,57 @@ func (s *SceneResource) Create(ctx context.Context, req resource.CreateRequest, 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (s *SceneResource) createSceneCreateObj(data SceneResourceModel) resources.SceneCreate {
+func (s *SceneResource) createSceneCreateObj(data SceneResourceModel) scene.SceneCreate {
 	actionTargets := s.createSceneActionObj(data)
 
-	createObj := resources.SceneCreate{
-		Metadata: resources.SceneMetadata{
+	createObj := scene.SceneCreate{
+		Metadata: scene.SceneMetadata{
 			Name: data.Name.ValueString(),
 		},
 		Actions: actionTargets,
-		Group: resources.Group{
-			Rid:   data.Group.Rid.ValueString(),
-			Rtype: data.Group.Rtype.ValueString(),
+		Group: common.Reference{
+			RID:   data.Group.Rid.ValueString(),
+			RType: data.Group.Rtype.ValueString(),
 		},
 	}
 	return createObj
 }
 
-func (s *SceneResource) createSceneUpdateObj(data SceneResourceModel) resources.SceneUpdate {
+func (s *SceneResource) createSceneUpdateObj(data SceneResourceModel) scene.SceneUpdate {
 	actionTargets := s.createSceneActionObj(data)
 
-	return resources.SceneUpdate{
-		Metadata: resources.SceneMetadata{
+	return scene.SceneUpdate{
+		Metadata: scene.SceneMetadata{
 			Name: data.Name.ValueString(),
 		},
 		Actions: actionTargets,
 	}
 }
 
-func (s *SceneResource) createSceneActionObj(data SceneResourceModel) []resources.ActionTarget {
-	actionTargets := make([]resources.ActionTarget, len(data.Actions))
+func (s *SceneResource) createSceneActionObj(data SceneResourceModel) []scene.ActionTarget {
+	actionTargets := make([]scene.ActionTarget, len(data.Actions))
 	for i, action := range data.Actions {
-		newAction := resources.Action{
-			On: &resources.On{
+		newAction := scene.Action{
+			On: &scene.On{
 				On: action.On.ValueBool(),
 			},
 			Dimming: &common.Dimming{Brightness: action.Brightness.ValueFloat64()},
 		}
 		if action.Color != nil {
-			newAction.Color = &resources.Color{
-				XY: common.XYCoord{
+			newAction.Color = &light.Color{
+				XY: color.XYCoord{
 					X: action.Color.X.ValueFloat64(),
 					Y: action.Color.Y.ValueFloat64(),
 				},
 			}
 		}
 		if !action.ColorTemperature.IsNull() && !action.ColorTemperature.IsUnknown() {
-			newAction.ColorTemperature = &resources.ColorTemperature{
+			newAction.ColorTemperature = &light.ColorTemperature{
 				Mirek: int(color.KelvinToMirekRounded(int32(action.ColorTemperature.ValueInt32()))),
 			}
 		}
-		actionTarget := resources.ActionTarget{
-			Target: resources.Target{
+		actionTarget := scene.ActionTarget{
+			Target: scene.Target{
 				Rid:   action.TargetId.ValueString(),
 				Rtype: action.TargetType.ValueString(),
 			},
@@ -255,8 +257,8 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	scene, err := s.client.SceneService.GetScene(ctx, data.Id.ValueString())
-	tfsdklog.Info(ctx, "scene:", map[string]interface{}{"scene": scene})
+	result, err := s.client.SceneService().GetScene(ctx, data.Id.ValueString())
+	tfsdklog.Info(ctx, "scene:", map[string]interface{}{"scene": result})
 	if err != nil {
 		if err.Error() == "Not Found" {
 			resp.State.RemoveResource(ctx)
@@ -269,13 +271,13 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		return
 	}
 
-	data.Name = types.StringValue(scene.Metadata.Name)
+	data.Name = types.StringValue(result.Metadata.Name)
 	data.Group = &ResourceReference{
-		Rid:   types.StringValue(scene.Group.Rid),
-		Rtype: types.StringValue(scene.Group.Rtype),
+		Rid:   types.StringValue(result.Group.RID),
+		Rtype: types.StringValue(result.Group.RType),
 	}
-	actions := make([]SceneActionModel, len(scene.Actions))
-	for i, action := range scene.Actions {
+	actions := make([]SceneActionModel, len(result.Actions))
+	for i, action := range result.Actions {
 		var onValue types.Bool
 		if action.Action.On != nil {
 			onValue = types.BoolValue(action.Action.On.On)
@@ -319,7 +321,7 @@ func (s *SceneResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	update := s.createSceneUpdateObj(data)
 
-	_, err := s.client.SceneService.UpdateScene(ctx, data.Id.ValueString(), update)
+	_, err := s.client.SceneService().UpdateScene(ctx, data.Id.ValueString(), update)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating scene",
@@ -338,7 +340,7 @@ func (s *SceneResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		return
 	}
 	id := data.Id.ValueString()
-	err := s.client.SceneService.DeleteScene(ctx, id)
+	err := s.client.SceneService().DeleteScene(ctx, id)
 	if err != nil {
 		if err.Error() == "Not Found" {
 			return

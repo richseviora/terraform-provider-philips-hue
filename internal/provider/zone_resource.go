@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/richseviora/huego/pkg/resources/client"
+	"github.com/richseviora/huego/pkg/resources/common"
+	"github.com/richseviora/huego/pkg/resources/zone"
+
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -15,9 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-
-	"github.com/richseviora/huego/pkg/resources"
-	"github.com/richseviora/huego/pkg/resources/common"
 )
 
 var _ resource.Resource = &ZoneResource{}
@@ -25,7 +26,7 @@ var _ resource.ResourceWithConfigure = &ZoneResource{}
 var _ resource.ResourceWithImportState = &ZoneResource{}
 
 type ZoneResource struct {
-	client *resources.APIClient
+	client client.HueServiceClient
 }
 
 type Reference struct {
@@ -49,11 +50,11 @@ func (z *ZoneResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	if req.ProviderData == nil {
 		return
 	}
-	client, ok := req.ProviderData.(*resources.APIClient)
+	client, ok := req.ProviderData.(client.HueServiceClient)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *resources.APIClient, got: %T.", req.ProviderData),
+			fmt.Sprintf("Expected client.HueServiceClient, got: %T.", req.ProviderData),
 		)
 		return
 	}
@@ -81,7 +82,7 @@ func (z *ZoneResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"type": schema.StringAttribute{
 				Required: true,
 				Validators: []validator.String{
-					stringvalidator.OneOf(resources.AreaNames[:]...),
+					stringvalidator.OneOf(common.AreaNames[:]...),
 				},
 			},
 			"reference": schema.ObjectAttribute{
@@ -116,7 +117,7 @@ func (z *ZoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 
 	body := CreateZoneBodyFromModel(data)
 
-	createdBody, err := z.client.ZoneService.CreateZone(ctx, body)
+	createdBody, err := z.client.ZoneService().CreateZone(ctx, body)
 	if err != nil {
 		resp.Diagnostics.AddError("Error creating zone", err.Error())
 		return
@@ -142,7 +143,7 @@ func (z *ZoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	zone, err := z.client.ZoneService.GetZone(ctx, data.ID.ValueString())
+	zone, err := z.client.ZoneService().GetZone(ctx, data.ID.ValueString())
 
 	if err != nil {
 		if err.Error() == "Not Found" {
@@ -164,7 +165,7 @@ func (z *ZoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 	body := CreateZoneBodyFromModel(data)
-	_, err := z.client.ZoneService.UpdateZone(ctx, data.ID.ValueString(), body)
+	_, err := z.client.ZoneService().UpdateZone(ctx, data.ID.ValueString(), body)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating Zone", err.Error())
 	}
@@ -178,7 +179,7 @@ func (z *ZoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 	id := data.ID.ValueString()
-	err := z.client.ZoneService.DeleteZone(ctx, id)
+	err := z.client.ZoneService().DeleteZone(ctx, id)
 	if err != nil {
 		if err.Error() == "Not Found" {
 			return
@@ -187,7 +188,7 @@ func (z *ZoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 }
 
-func CreateZoneModelFromData(data *resources.ZoneData) ZoneResourceModel {
+func CreateZoneModelFromData(data *zone.ZoneData) ZoneResourceModel {
 	lightIds := make([]types.String, len(data.Children))
 	for i, child := range data.Children {
 		lightIds[i] = types.StringValue(child.RID)
@@ -208,7 +209,7 @@ func CreateZoneModelFromData(data *resources.ZoneData) ZoneResourceModel {
 	}
 }
 
-func CreateZoneBodyFromModel(model ZoneResourceModel) *resources.ZoneCreateOrUpdate {
+func CreateZoneBodyFromModel(model ZoneResourceModel) *zone.ZoneCreateOrUpdate {
 	children := make([]common.Reference, len(model.LightIDs))
 	for i, id := range model.LightIDs {
 		children[i] = common.Reference{
@@ -216,9 +217,9 @@ func CreateZoneBodyFromModel(model ZoneResourceModel) *resources.ZoneCreateOrUpd
 			RType: "light",
 		}
 	}
-	return &resources.ZoneCreateOrUpdate{
+	return &zone.ZoneCreateOrUpdate{
 		Children: children,
-		Metadata: resources.ZoneMetadata{
+		Metadata: zone.ZoneMetadata{
 			Name:      model.Name.ValueString(),
 			Archetype: model.Type.ValueString(),
 		},
