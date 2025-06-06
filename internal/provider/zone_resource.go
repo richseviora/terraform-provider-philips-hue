@@ -3,8 +3,8 @@ package provider
 import (
 	"context"
 	"fmt"
+	"terraform-provider-philips-hue/internal/provider/device"
 
-	"github.com/richseviora/huego/pkg/resources/client"
 	"github.com/richseviora/huego/pkg/resources/common"
 	"github.com/richseviora/huego/pkg/resources/zone"
 
@@ -26,7 +26,7 @@ var _ resource.ResourceWithConfigure = &ZoneResource{}
 var _ resource.ResourceWithImportState = &ZoneResource{}
 
 type ZoneResource struct {
-	client client.HueServiceClient
+	client device.ClientWithLightIDCache
 }
 
 type Reference struct {
@@ -50,11 +50,11 @@ func (z *ZoneResource) Configure(ctx context.Context, req resource.ConfigureRequ
 	if req.ProviderData == nil {
 		return
 	}
-	client, ok := req.ProviderData.(client.HueServiceClient)
+	client, ok := req.ProviderData.(device.ClientWithLightIDCache)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected client.HueServiceClient, got: %T.", req.ProviderData),
+			fmt.Sprintf("Expected device.ClientWithLightIDCache, got: %T.", req.ProviderData),
 		)
 		return
 	}

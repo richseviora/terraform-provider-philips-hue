@@ -12,8 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/richseviora/huego/pkg/resources/client"
 	"github.com/richseviora/huego/pkg/resources/light"
+	"regexp"
+	"terraform-provider-philips-hue/internal/provider/device"
 )
 
 var _ resource.Resource = &LightResource{}
@@ -21,7 +22,7 @@ var _ resource.ResourceWithImportState = &LightResource{}
 var _ resource.ResourceWithConfigure = &LightResource{}
 
 type LightResource struct {
-	client client.HueServiceClient
+	client device.ClientWithLightIDCache
 }
 
 type LightResourceModel struct {
@@ -88,10 +89,13 @@ func (l *LightResource) Configure(ctx context.Context, request resource.Configur
 	if request.ProviderData == nil {
 		return
 	}
-	client, ok := request.ProviderData.(client.HueServiceClient)
+	client, ok := request.ProviderData.(device.ClientWithLightIDCache)
 	if !ok {
-		response.Diagnostics.AddError("Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected client.HueServiceClient, got: %T. Please report this issue to the provider developers.", request.ProviderData))
+		response.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected device.ClientWithLightIDCache, got: %T.", request.ProviderData),
+		)
+		return
 	}
 	l.client = client
 }
@@ -175,5 +179,21 @@ func (l *LightResource) Delete(ctx context.Context, request resource.DeleteReque
 }
 
 func (l *LightResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("id"), request, response)
+	matched, err := regexp.MatchString(`^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$`, request.ID)
+	if err != nil {
+		resource.ImportStatePassthroughID(ctx, path.Root("id"), request, response)
+	} else if !matched {
+		resource.ImportStatePassthroughID(ctx, path.Root("id"), request, response)
+	}
+
+	lightID, err := l.client.GetLightIDForMacAddress(request.ID)
+	if err != nil {
+		response.Diagnostics.AddError("Error importing light", "Could not find light with MAC address "+request.ID+": "+err.Error())
+		return
+	}
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), resource.ImportStateRequest{
+		ID:                 lightID,
+		ClientCapabilities: request.ClientCapabilities,
+	}, response)
+
 }

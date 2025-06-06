@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/richseviora/huego/pkg"
+	"terraform-provider-philips-hue/internal/provider/device"
 )
 
 // Ensure PhilipsHueProvider satisfies various provider interfaces.
@@ -68,7 +69,7 @@ func (p *PhilipsHueProvider) Configure(ctx context.Context, req provider.Configu
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create client, got error: %s", err))
 		return
 	}
-	resp.DataSourceData = client
+	resp.DataSourceData = device.NewClientWithCache(client)
 	resp.ResourceData = client
 }
 

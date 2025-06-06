@@ -13,9 +13,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/richseviora/huego/pkg/resources/client"
 	"github.com/richseviora/huego/pkg/resources/common"
 	room2 "github.com/richseviora/huego/pkg/resources/room"
+	"terraform-provider-philips-hue/internal/provider/device"
 )
 
 var _ resource.Resource = &RoomResource{}
@@ -27,7 +27,7 @@ func NewRoomResource() resource.Resource {
 }
 
 type RoomResource struct {
-	client client.HueServiceClient
+	client device.ClientWithLightIDCache
 }
 
 type RoomResourceModel struct {
@@ -88,7 +88,7 @@ func (r *RoomResource) Configure(ctx context.Context, request resource.Configure
 	if request.ProviderData == nil {
 		return
 	}
-	client, ok := request.ProviderData.(client.HueServiceClient)
+	client, ok := request.ProviderData.(device.ClientWithLightIDCache)
 	if !ok {
 		response.Diagnostics.AddError("Unexpected Resource Configure Type",
 			fmt.Sprintf("Expected client.HueServiceClient, got: %T. Please report this issue to the provider developers.", request.ProviderData))

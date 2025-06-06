@@ -17,11 +17,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-log/tfsdklog"
-	client2 "github.com/richseviora/huego/pkg/resources/client"
 	"github.com/richseviora/huego/pkg/resources/color"
 	"github.com/richseviora/huego/pkg/resources/common"
 	"github.com/richseviora/huego/pkg/resources/light"
 	"github.com/richseviora/huego/pkg/resources/scene"
+	"terraform-provider-philips-hue/internal/provider/device"
 )
 
 var _ resource.Resource = &SceneResource{}
@@ -33,7 +33,7 @@ func NewSceneResource() resource.Resource {
 }
 
 type SceneResource struct {
-	client client2.HueServiceClient
+	client device.ClientWithLightIDCache
 }
 
 type SceneActionColorModel struct {
@@ -159,11 +159,11 @@ func (s *SceneResource) Configure(_ context.Context, req resource.ConfigureReque
 	if req.ProviderData == nil {
 		return
 	}
-	client, ok := req.ProviderData.(client2.HueServiceClient)
+	client, ok := req.ProviderData.(device.ClientWithLightIDCache)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *resources.APIClient, got: %T.", req.ProviderData),
+			fmt.Sprintf("Expected device.ClientWithLightIDCache, got: %T.", req.ProviderData),
 		)
 		return
 	}
