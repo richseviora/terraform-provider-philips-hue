@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/float64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -17,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-log/tfsdklog"
+	"github.com/richseviora/huego/pkg/resources/client"
 	"github.com/richseviora/huego/pkg/resources/color"
 	"github.com/richseviora/huego/pkg/resources/common"
 	"github.com/richseviora/huego/pkg/resources/light"
@@ -260,7 +262,7 @@ func (s *SceneResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	result, err := s.client.SceneService().GetScene(ctx, data.Id.ValueString())
 	tfsdklog.Info(ctx, "scene:", map[string]interface{}{"scene": result})
 	if err != nil {
-		if err.Error() == "Not Found" {
+		if errors.Is(err, client.ErrNotFound) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -342,7 +344,8 @@ func (s *SceneResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 	id := data.Id.ValueString()
 	err := s.client.SceneService().DeleteScene(ctx, id)
 	if err != nil {
-		if err.Error() == "Not Found" {
+		if errors.Is(err, client.ErrNotFound) {
+			resp.State.RemoveResource(ctx)
 			return
 		}
 		resp.Diagnostics.AddError("Error deleting zone", err.Error())

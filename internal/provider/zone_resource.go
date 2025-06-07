@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/richseviora/huego/pkg/resources/client"
 	"terraform-provider-philips-hue/internal/provider/device"
 
 	"github.com/richseviora/huego/pkg/resources/common"
@@ -146,7 +148,7 @@ func (z *ZoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	zone, err := z.client.ZoneService().GetZone(ctx, data.ID.ValueString())
 
 	if err != nil {
-		if err.Error() == "Not Found" {
+		if errors.Is(err, client.ErrNotFound) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -181,7 +183,8 @@ func (z *ZoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	id := data.ID.ValueString()
 	err := z.client.ZoneService().DeleteZone(ctx, id)
 	if err != nil {
-		if err.Error() == "Not Found" {
+		if errors.Is(err, client.ErrNotFound) {
+			resp.State.RemoveResource(ctx)
 			return
 		}
 		resp.Diagnostics.AddError("Error deleting zone", err.Error())

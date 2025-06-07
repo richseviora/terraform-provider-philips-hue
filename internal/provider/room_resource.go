@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/richseviora/huego/pkg/resources/client"
 	"github.com/richseviora/huego/pkg/resources/common"
 	room2 "github.com/richseviora/huego/pkg/resources/room"
 	"terraform-provider-philips-hue/internal/provider/device"
@@ -155,7 +157,7 @@ func (r *RoomResource) Read(ctx context.Context, request resource.ReadRequest, r
 
 	room, err := r.client.RoomService().GetRoom(ctx, data.Id.ValueString())
 	if err != nil {
-		if err.Error() == "Not Found" {
+		if errors.Is(err, client.ErrNotFound) {
 			response.State.RemoveResource(ctx)
 			return
 		}
@@ -236,7 +238,8 @@ func (r *RoomResource) Delete(ctx context.Context, request resource.DeleteReques
 	id := data.Id.ValueString()
 	err := r.client.RoomService().DeleteRoom(ctx, id)
 	if err != nil {
-		if err.Error() == "Not Found" {
+		if errors.Is(err, client.ErrNotFound) {
+			response.State.RemoveResource(ctx)
 			return
 		}
 		response.Diagnostics.AddError("Error deleting zone", err.Error())
