@@ -66,7 +66,7 @@ func (l *LightResource) Schema(ctx context.Context, request resource.SchemaReque
 				PlanModifiers:       nil,
 			},
 			"function": schema.StringAttribute{
-				Required:            true,
+				Optional:            true,
 				Description:         "The function of the Light device in the Hue Bridge. ",
 				MarkdownDescription: "",
 				Validators: []validator.String{
@@ -152,6 +152,9 @@ func (l *LightResource) Update(ctx context.Context, request resource.UpdateReque
 	}
 	if data.Function.ValueString() != "" {
 		update.Function = data.Function.ValueStringPointer()
+	} else if data.Function.IsNull() || data.Function.IsUnknown() {
+		s := "decorative"
+		update.Function = &s
 	}
 
 	lightUpdate := light.LightUpdate{

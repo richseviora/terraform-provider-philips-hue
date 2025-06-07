@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/richseviora/huego/pkg"
+	"github.com/richseviora/huego/pkg/resources/zigbee_connectivity"
 	"terraform-provider-philips-hue/internal/provider/device"
 )
 
@@ -72,16 +73,16 @@ func (p *PhilipsHueProvider) Configure(ctx context.Context, req provider.Configu
 
 	clientWithCache := device.NewClientWithCache(client)
 	if data.OutputImports.ValueBool() {
-		devices, err := clientWithCache.GetAllDevices()
+		devices, zigbeeErrors, err := clientWithCache.GetAllDevices()
 		if err != nil {
 			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get devices, got error: %s", err))
 		} else {
-			resp.Diagnostics.AddWarning("Imports", generateImportOutput(devices))
+			resp.Diagnostics.AddWarning("Imports", generateImportOutput(devices, zigbeeErrors))
 		}
 	}
 
 	resp.DataSourceData = clientWithCache
-	resp.ResourceData = client
+	resp.ResourceData = clientWithCache
 }
 
 func (p *PhilipsHueProvider) Resources(ctx context.Context) []func() resource.Resource {
@@ -119,16 +120,29 @@ func New(version string) func() provider.Provider {
 	}
 }
 
-func generateImportOutput(entries []device.DeviceMappingEntry) string {
+func generateImportOutput(entries []device.DeviceMappingEntry, missingEntries []zigbee_connectivity.Data) string {
 	result := ""
+
 	for _, entry := range entries {
+		if !entry.IsLight() {
+			continue
+		}
 		result += fmt.Sprintf(`
 import {
-  \\ Name = %s
+  # Name = %s
   id = "%s"
-  to = "philips_hue_light.REPLACE_ME"
+  to = philips_light.REPLACE_ME
 }
 `, entry.Name, entry.MacAddress)
+	}
+
+	for _, entry := range missingEntries {
+		result += fmt.Sprintf(`
+/* 
+Could not resolve MAC address:
+%+v
+*/
+`, entry)
 	}
 	return result
 }

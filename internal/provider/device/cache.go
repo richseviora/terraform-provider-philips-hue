@@ -10,6 +10,7 @@ import (
 	"github.com/richseviora/huego/pkg/resources/scene"
 	"github.com/richseviora/huego/pkg/resources/zigbee_connectivity"
 	"github.com/richseviora/huego/pkg/resources/zone"
+	"slices"
 	"sync"
 )
 
@@ -21,11 +22,16 @@ type DeviceMappingEntry struct {
 	MacAddress           string
 }
 
+func (d DeviceMappingEntry) IsLight() bool {
+	return d.LightID != ""
+}
+
 type ClientWithCache struct {
-	client     client.HueServiceClient
-	cache      map[string]DeviceMappingEntry
-	cacheBuilt bool
-	mutex      sync.Mutex
+	client       client.HueServiceClient
+	cache        map[string]DeviceMappingEntry
+	zigbeeErrors []zigbee_connectivity.Data
+	cacheBuilt   bool
+	mutex        sync.Mutex
 }
 
 func NewClientWithCache(client client.HueServiceClient) *ClientWithCache {
@@ -35,17 +41,18 @@ func NewClientWithCache(client client.HueServiceClient) *ClientWithCache {
 	}
 }
 
-func (c *ClientWithCache) BuildDeviceMap(ctx context.Context) (map[string]DeviceMappingEntry, error) {
+func (c *ClientWithCache) buildDeviceMap(ctx context.Context) (map[string]DeviceMappingEntry, []zigbee_connectivity.Data, error) {
 	devices, err := c.client.DeviceService().GetAllDevices(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	zigbees, err := c.client.ZigbeeConnectivityService().GetAllZigbeeConnectivity(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	deviceMap := make(map[string]DeviceMappingEntry)
+
 	for _, d := range devices.Data {
 		entry := DeviceMappingEntry{
 			DeviceID: d.ID,
@@ -62,23 +69,28 @@ func (c *ClientWithCache) BuildDeviceMap(ctx context.Context) (map[string]Device
 		}
 		deviceMap[d.ID] = entry
 	}
+	zigbeeEntries := make([]zigbee_connectivity.Data, 0)
 	for _, zigbee := range zigbees.Data {
 		deviceEntry, ok := deviceMap[zigbee.Owner.RID]
 		if ok {
 			deviceEntry.MacAddress = zigbee.MacAddress
+			deviceMap[zigbee.Owner.RID] = deviceEntry
+		} else {
+			zigbeeEntries = append(zigbeeEntries, zigbee)
 		}
 	}
-	return deviceMap, nil
+	return deviceMap, zigbeeEntries, nil
 }
 
 func (c *ClientWithCache) GetLightIDForMacAddress(macAddress string) (string, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if !c.cacheBuilt {
-		deviceMap, err := c.BuildDeviceMap(context.Background())
+		deviceMap, zigbeeErrors, err := c.buildDeviceMap(context.Background())
 		if err != nil {
 			return "", err
 		}
+		c.zigbeeErrors = zigbeeErrors
 		c.cache = deviceMap
 		c.cacheBuilt = true
 	}
@@ -90,14 +102,15 @@ func (c *ClientWithCache) GetLightIDForMacAddress(macAddress string) (string, er
 	return "", errors.New("could not find Mac Address in cache: " + macAddress + "")
 }
 
-func (c *ClientWithCache) GetAllDevices() ([]DeviceMappingEntry, error) {
+func (c *ClientWithCache) GetAllDevices() ([]DeviceMappingEntry, []zigbee_connectivity.Data, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if !c.cacheBuilt {
-		deviceMap, err := c.BuildDeviceMap(context.Background())
+		deviceMap, zigbeeErrors, err := c.buildDeviceMap(context.Background())
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		c.zigbeeErrors = zigbeeErrors
 		c.cache = deviceMap
 		c.cacheBuilt = true
 	}
@@ -105,7 +118,15 @@ func (c *ClientWithCache) GetAllDevices() ([]DeviceMappingEntry, error) {
 	for _, d := range c.cache {
 		devices = append(devices, d)
 	}
-	return devices, nil
+	slices.SortFunc(devices, func(i, j DeviceMappingEntry) int {
+		if i.Name < j.Name {
+			return -1
+		} else if i.Name > j.Name {
+			return 1
+		}
+		return 0
+	})
+	return devices, c.zigbeeErrors, nil
 }
 
 var (
