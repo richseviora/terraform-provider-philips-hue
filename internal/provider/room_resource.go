@@ -113,11 +113,13 @@ func (r *RoomResource) Create(ctx context.Context, request resource.CreateReques
 		return
 	}
 
-	children := make([]common.Reference, len(data.DeviceIds.Elements()))
-	for _, deviceId := range data.DeviceIds.Elements() {
+	children := make([]common.Reference, 0)
+	elements := make([]types.String, 0, len(data.DeviceIds.Elements()))
+	data.DeviceIds.ElementsAs(ctx, &elements, false)
+	for _, deviceId := range elements {
 		children = append(children, common.Reference{
-			RID:   deviceId.String(),
-			RType: "light",
+			RID:   deviceId.ValueString(),
+			RType: "device",
 		})
 	}
 
@@ -201,11 +203,13 @@ func (r *RoomResource) Update(ctx context.Context, request resource.UpdateReques
 		return
 	}
 
-	children := make([]common.Reference, len(data.DeviceIds.Elements()))
-	for _, deviceId := range data.DeviceIds.Elements() {
+	children := make([]common.Reference, 0)
+	elements := make([]types.String, 0, len(data.DeviceIds.Elements()))
+	data.DeviceIds.ElementsAs(ctx, &elements, false)
+	for _, deviceId := range elements {
 		children = append(children, common.Reference{
-			RID:   deviceId.String(),
-			RType: "light",
+			RID:   deviceId.ValueString(),
+			RType: "device",
 		})
 	}
 

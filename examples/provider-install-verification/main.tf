@@ -30,9 +30,11 @@ locals {
     philips_light.kitchen_table_spot,
     philips_light.kitchen_shelves,
     philips_light.kitchen_sink_strip,
+    philips_light.kitchen_valance,
   ]
   living_room_lights = [
     philips_light.living_room_tv_wall,
+    philips_light.tv_strip,
     philips_light.desk_left,
     philips_light.desk_right,
     philips_light.living_room_window_strip,
@@ -40,11 +42,23 @@ locals {
     philips_light.living_room_left,
     philips_light.living_room_kitchen_wall,
     philips_light.living_room_bookshelf,
+    philips_light.hallway_overhead_1,
+    philips_light.hallway_overhead_2,
   ]
   hallway_lights = [
     philips_light.hallway_lamp,
     philips_light.hallway_strip
   ]
+  bedroom_lights = concat(philips_light.bedroom_overhead, [
+    philips_light.bedroom_left, philips_light.bedroom_right, philips_light.bedroom_valance
+  ])
+  all_lights = concat(local.kitchen_lights, local.living_room_lights, local.hallway_lights, local.bedroom_lights, philips_light.bathroom)
+}
+
+import {
+  for_each = local.bedroom_overheads
+  to       = philips_light.bedroom_overhead[each.key]
+  id       = each.value
 }
 
 import {
@@ -66,15 +80,18 @@ import {
 }
 
 resource philips_light bedroom_left {
-  name = "Bed Left"
+  name     = "Bed Left"
+  function = "decorative"
 }
 
 resource philips_light bedroom_right {
-  name = "Bed Right"
+  name     = "Bed Right"
+  function = "decorative"
 }
 
 resource philips_light bedroom_valance {
-  name = "Bedroom Valance"
+  name     = "Bedroom Valance"
+  function = "decorative"
 }
 
 resource philips_light bedroom_overhead {
@@ -121,26 +138,32 @@ import {
 }
 
 resource philips_light "kitchen_range" {
-  name = "Kitchen Range"
+  name     = "Kitchen Range"
+  function = "functional"
 }
 
 resource philips_light "kitchen_shelves" {
-  name = "Kitchen Shelves"
+  name     = "Kitchen Shelves"
+  function = "decorative"
 }
 
 resource philips_light "kitchen_sink_strip" {
-  name = "Sink Strip"
+  name     = "Sink Strip"
+  function = "functional"
 }
 resource philips_light "kitchen_spot_outside" {
-  name = "Kitchen Spot Outside"
+  name     = "Kitchen Spot Outside"
+  function = "decorative"
 }
 
 resource philips_light "kitchen_table_spot" {
-  name = "Kitchen Table Spot"
+  name     = "Kitchen Table Spot"
+  function = "decorative"
 }
 
 resource philips_light "kitchen_valance" {
-  name = "Kitchen Valance"
+  name     = "Kitchen Valance"
+  function = "decorative"
 }
 
 resource philips_room "kitchen" {
@@ -219,47 +242,58 @@ import {
 
 
 resource philips_light "desk_left" {
-  name = "Desk Left"
+  name     = "Desk Left"
+  function = "decorative"
 }
 
 resource philips_light "desk_right" {
-  name = "Desk Right"
+  name     = "Desk Right"
+  function = "decorative"
 }
 
 resource philips_light "tv_strip" {
-  name = "Desk and TV Strip"
+  name     = "Desk and TV Strip"
+  function = "decorative"
 }
 
 resource philips_light "hallway_overhead_1" {
-  name = "Hallway Overhead 1"
+  name     = "Hallway Overhead 1"
+  function = "decorative"
 }
 
 resource philips_light "hallway_overhead_2" {
-  name = "Hallway Overhead 2"
+  name     = "Hallway Overhead 2"
+  function = "decorative"
 }
 
 resource philips_light "living_room_bookshelf" {
-  name = "Living Room Bookshelf"
+  name     = "Living Room Bookshelf"
+  function = "decorative"
 }
 
 resource philips_light "living_room_kitchen_wall" {
-  name = "Living Room Kitchen Wall"
+  name     = "Living Room Kitchen Wall"
+  function = "decorative"
 }
 
 resource philips_light "living_room_left" {
-  name = "Living Room Left"
+  name     = "Living Room Left"
+  function = "decorative"
 }
 
 resource philips_light "living_room_orb" {
-  name = "Living Room ORB"
+  name     = "Living Room ORB"
+  function = "functional"
 }
 
 resource philips_light "living_room_tv_wall" {
-  name = "Living Room TV Wall"
+  name     = "Living Room TV Wall"
+  function = "decorative"
 }
 
 resource philips_light "living_room_window_strip" {
-  name = "Living Room Window Strip"
+  name     = "Living Room Window Strip"
+  function = "decorative"
 }
 
 resource philips_room "living_room" {
@@ -282,11 +316,13 @@ import {
 }
 
 resource philips_light "hallway_lamp" {
-  name = "Hallway Lamp"
+  name     = "Hallway Lamp"
+  function = "decorative"
 }
 
 resource philips_light "hallway_strip" {
-  name = "Hallway Strip"
+  name     = "Hallway Strip"
+  function = "decorative"
 }
 
 
@@ -305,12 +341,6 @@ import {
 import {
   to = philips_scene.bathroom_bright
   id = "68b39f81-1c15-4c82-bd0b-ab28606f3d2e"
-}
-
-import {
-  for_each = local.bedroom_overheads
-  to       = philips_light.bedroom_overhead[each.key]
-  id       = each.value
 }
 
 import {
@@ -363,5 +393,5 @@ resource philips_scene "bathroom_cool" {
 resource philips_zone "everything" {
   name      = "EVERYTHING"
   type      = "home"
-  light_ids = [for light in philips_light.bathroom : light.id]
+  light_ids = [for light in local.all_lights : light.id]
 }
