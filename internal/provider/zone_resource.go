@@ -162,11 +162,13 @@ func (z *ZoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 func (z *ZoneResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data ZoneResourceModel
-	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
 	body := createZoneBodyFromModel(data)
+	tflog.Info(ctx, "Update", map[string]interface{}{"data": data, "number_of_children(body)": len(body.Children), "number_children(data)": len(data.LightIDs)})
 	_, err := z.client.ZoneService().UpdateZone(ctx, data.ID.ValueString(), body)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating Zone", err.Error())
@@ -184,7 +186,6 @@ func (z *ZoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	err := z.client.ZoneService().DeleteZone(ctx, id)
 	if err != nil {
 		if errors.Is(err, client.ErrNotFound) {
-			resp.State.RemoveResource(ctx)
 			return
 		}
 		resp.Diagnostics.AddError("Error deleting zone", err.Error())
