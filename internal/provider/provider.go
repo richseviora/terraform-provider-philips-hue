@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/richseviora/huego/pkg"
 	"github.com/richseviora/huego/pkg/resources/zigbee_connectivity"
+	"strings"
 	"terraform-provider-philips-hue/internal/provider/device"
 )
 
@@ -121,19 +122,22 @@ func New(version string) func() provider.Provider {
 }
 
 func generateImportOutput(entries []device.DeviceMappingEntry, missingEntries []zigbee_connectivity.Data) string {
+	resourceResult := ""
 	result := ""
 
 	for _, entry := range entries {
 		if !entry.IsLight() {
 			continue
 		}
-		result += fmt.Sprintf(`
-import {
-  # Name = %s
-  id = "%s"
-  to = philips_light.REPLACE_ME
+		formattedName := strings.ToLower(entry.Name)
+		formattedName = strings.ReplaceAll(formattedName, " ", "_")
+		result += fmt.Sprintf("\nimport {\n  # Name = %s\n  id = \"%s\"\n  to = philips_light.%s\n}\n", entry.Name, entry.MacAddress, formattedName)
+		resourceResult += fmt.Sprintf(`
+resource philips_light "%s" {
+  name = "%s"
+  type = "decorative"
 }
-`, entry.Name, entry.MacAddress)
+`, formattedName, entry.Name)
 	}
 
 	for _, entry := range missingEntries {
@@ -144,5 +148,5 @@ Could not resolve MAC address:
 */
 `, entry)
 	}
-	return result
+	return result + resourceResult
 }
