@@ -117,7 +117,7 @@ func (z *ZoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		return
 	}
 
-	body := CreateZoneBodyFromModel(data)
+	body := createZoneBodyFromModel(data)
 
 	createdBody, err := z.client.ZoneService().CreateZone(ctx, body)
 	if err != nil {
@@ -156,7 +156,7 @@ func (z *ZoneResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	data = CreateZoneModelFromData(zone)
+	data = createZoneModelFromData(zone)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
@@ -166,7 +166,7 @@ func (z *ZoneResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	body := CreateZoneBodyFromModel(data)
+	body := createZoneBodyFromModel(data)
 	_, err := z.client.ZoneService().UpdateZone(ctx, data.ID.ValueString(), body)
 	if err != nil {
 		resp.Diagnostics.AddError("Error updating Zone", err.Error())
@@ -191,7 +191,7 @@ func (z *ZoneResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 	}
 }
 
-func CreateZoneModelFromData(data *zone.ZoneData) ZoneResourceModel {
+func createZoneModelFromData(data *zone.ZoneData) ZoneResourceModel {
 	lightIds := make([]types.String, len(data.Children))
 	for i, child := range data.Children {
 		lightIds[i] = types.StringValue(child.RID)
@@ -212,7 +212,7 @@ func CreateZoneModelFromData(data *zone.ZoneData) ZoneResourceModel {
 	}
 }
 
-func CreateZoneBodyFromModel(model ZoneResourceModel) *zone.ZoneCreateOrUpdate {
+func createZoneBodyFromModel(model ZoneResourceModel) *zone.ZoneCreateOrUpdate {
 	children := make([]common.Reference, len(model.LightIDs))
 	for i, id := range model.LightIDs {
 		children[i] = common.Reference{
