@@ -7,7 +7,7 @@ terraform {
 }
 
 provider "philips" {
-  output_imports = true
+  output_imports = false
 }
 
 locals {
