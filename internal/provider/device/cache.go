@@ -91,14 +91,9 @@ func (c *ClientWithCache) buildDeviceMap(ctx context.Context) (map[string]Device
 func (c *ClientWithCache) GetLightIDForMacAddress(macAddress string) (string, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if !c.cacheBuilt {
-		deviceMap, zigbeeErrors, err := c.buildDeviceMap(context.Background())
-		if err != nil {
-			return "", err
-		}
-		c.zigbeeErrors = zigbeeErrors
-		c.cache = deviceMap
-		c.cacheBuilt = true
+	_, _, _, err := c.buildCache()
+	if err != nil {
+		return "", err
 	}
 	for _, d := range c.cache {
 		if d.MacAddress == macAddress {
@@ -108,19 +103,28 @@ func (c *ClientWithCache) GetLightIDForMacAddress(macAddress string) (string, er
 	return "", errors.New("could not find Mac Address in cache: " + macAddress + "")
 }
 
+func (c *ClientWithCache) GetMotionIDForMacAddress(macAddress string) (string, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	_, _, _, err := c.buildCache()
+	if err != nil {
+		return "", err
+	}
+	for _, d := range c.cache {
+		if d.MacAddress == macAddress {
+			return d.MotionID, nil
+		}
+	}
+	return "", errors.New("could not find Mac Address in cache: " + macAddress + "")
+}
+
 func (c *ClientWithCache) GetAllDevices() ([]DeviceMappingEntry, []zigbee_connectivity.Data, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if !c.cacheBuilt {
-		deviceMap, zigbeeErrors, err := c.buildDeviceMap(context.Background())
-		if err != nil {
-			return nil, nil, err
-		}
-		c.zigbeeErrors = zigbeeErrors
-		c.cache = deviceMap
-		c.cacheBuilt = true
+	devices, entries, data, err := c.buildCache()
+	if err != nil {
+		return entries, data, err
 	}
-	devices := make([]DeviceMappingEntry, 0)
 	for _, d := range c.cache {
 		devices = append(devices, d)
 	}
@@ -133,6 +137,20 @@ func (c *ClientWithCache) GetAllDevices() ([]DeviceMappingEntry, []zigbee_connec
 		return 0
 	})
 	return devices, c.zigbeeErrors, nil
+}
+
+func (c *ClientWithCache) buildCache() ([]DeviceMappingEntry, []DeviceMappingEntry, []zigbee_connectivity.Data, error) {
+	if !c.cacheBuilt {
+		deviceMap, zigbeeErrors, err := c.buildDeviceMap(context.Background())
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		c.zigbeeErrors = zigbeeErrors
+		c.cache = deviceMap
+		c.cacheBuilt = true
+	}
+	devices := make([]DeviceMappingEntry, 0)
+	return devices, nil, nil, nil
 }
 
 var (
@@ -181,4 +199,5 @@ func (c *ClientWithCache) MotionService() motion.Service {
 type ClientWithLightIDCache interface {
 	client.HueServiceClient
 	GetLightIDForMacAddress(macAddress string) (string, error)
+	GetMotionIDForMacAddress(macAddress string) (string, error)
 }
