@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -11,8 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/richseviora/huego/pkg/resources/motion"
 	"regexp"
 	"terraform-provider-philips-hue/internal/provider/device"
 )
@@ -62,11 +61,10 @@ func (m MotionResource) ImportState(ctx context.Context, request resource.Import
 }
 
 type MotionResourceModel struct {
-	Id        string       `tfsdk:"id"`
-	Name      string       `tfsdk:"name"`
-	DeviceID  string       `tfsdk:"device_id"`
+	Id        types.String `tfsdk:"id"`
+	DeviceID  types.String `tfsdk:"device_id"`
 	Reference types.Object `tfsdk:"reference"`
-	Enabled   bool         `tfsdk:"enabled"`
+	Enabled   types.Bool   `tfsdk:"enabled"`
 }
 
 func (m MotionResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -82,13 +80,6 @@ func (m MotionResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Description: "The UUID of the motion sensor in the Hue Bridge.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"name": schema.StringAttribute{
-				Required:    true,
-				Description: "The name of the motion sensor. 1-32 characters long.",
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(1, 32),
 				},
 			},
 			"enabled": schema.BoolAttribute{
@@ -124,13 +115,48 @@ func (m MotionResource) Create(ctx context.Context, req resource.CreateRequest, 
 }
 
 func (m MotionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	//TODO implement me
-	panic("implement me")
+	var data MotionResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resource, err := m.client.MotionService().GetMotion(ctx, data.Id.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading light",
+			"Could not read motion ID "+data.Id.ValueString()+": "+err.Error())
+		return
+	}
+	data.Id = types.StringValue(resource.ID)
+	data.Enabled = types.BoolValue(resource.Enabled)
+	data.Reference, _ = types.ObjectValue(map[string]attr.Type{
+		"rid":   types.StringType,
+		"rtype": types.StringType,
+	}, map[string]attr.Value{
+		"rid":   types.StringValue(resource.ID),
+		"rtype": types.StringValue("motion"),
+	})
+	data.DeviceID = types.StringValue(resource.Owner.RID)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (m MotionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var data MotionResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	update := &motion.UpdateRequest{
+		Enabled: data.Enabled.ValueBool(),
+	}
+	_, err := m.client.MotionService().UpdateMotion(ctx, data.Id.ValueString(), *update)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating motion",
+			"Could not update motion ID "+data.Id.ValueString()+": "+err.Error(),
+		)
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (m MotionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
