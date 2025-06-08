@@ -3,9 +3,12 @@ package device
 import (
 	"context"
 	"errors"
+	"github.com/richseviora/huego/pkg/resources/behavior_instance"
+	"github.com/richseviora/huego/pkg/resources/behavior_script"
 	"github.com/richseviora/huego/pkg/resources/client"
 	"github.com/richseviora/huego/pkg/resources/device"
 	"github.com/richseviora/huego/pkg/resources/light"
+	"github.com/richseviora/huego/pkg/resources/motion"
 	"github.com/richseviora/huego/pkg/resources/room"
 	"github.com/richseviora/huego/pkg/resources/scene"
 	"github.com/richseviora/huego/pkg/resources/zigbee_connectivity"
@@ -19,6 +22,7 @@ type DeviceMappingEntry struct {
 	DeviceID             string
 	LightID              string
 	ZigbeeConnectivityID string
+	MotionID             string
 	MacAddress           string
 }
 
@@ -65,6 +69,8 @@ func (c *ClientWithCache) buildDeviceMap(ctx context.Context) (map[string]Device
 				entry.LightID = service.Rid
 			case "zigbee_connectivity":
 				entry.ZigbeeConnectivityID = service.Rid
+			case "motion":
+				entry.MotionID = service.Rid
 			}
 		}
 		deviceMap[d.ID] = entry
@@ -133,6 +139,7 @@ var (
 	_ client.HueServiceClient = &ClientWithCache{}
 )
 
+// region Services
 func (c *ClientWithCache) ZoneService() zone.ZoneService {
 	return c.client.ZoneService()
 }
@@ -156,6 +163,20 @@ func (c *ClientWithCache) DeviceService() device.Service {
 func (c *ClientWithCache) ZigbeeConnectivityService() zigbee_connectivity.Service {
 	return c.client.ZigbeeConnectivityService()
 }
+
+func (c *ClientWithCache) BehaviorInstanceService() behavior_instance.Service {
+	return c.BehaviorInstanceService()
+}
+
+func (c *ClientWithCache) BehaviorScriptService() behavior_script.Service {
+	return c.BehaviorScriptService()
+}
+
+func (c *ClientWithCache) MotionService() motion.Service {
+	return c.MotionService()
+}
+
+//endregion
 
 type ClientWithLightIDCache interface {
 	client.HueServiceClient
