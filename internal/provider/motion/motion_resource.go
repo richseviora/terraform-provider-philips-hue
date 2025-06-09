@@ -1,4 +1,4 @@
-package provider
+package motion
 
 import (
 	"context"
@@ -21,6 +21,13 @@ var (
 	_ resource.ResourceWithImportState = &MotionResource{}
 	_ resource.ResourceWithConfigure   = &MotionResource{}
 )
+
+type MotionResourceModel struct {
+	Id        types.String `tfsdk:"id"`
+	DeviceID  types.String `tfsdk:"device_id"`
+	Reference types.Object `tfsdk:"reference"`
+	Enabled   types.Bool   `tfsdk:"enabled"`
+}
 
 type MotionResource struct {
 	client device.ClientWithLightIDCache
@@ -58,13 +65,6 @@ func (m MotionResource) ImportState(ctx context.Context, request resource.Import
 		ID:                 id,
 		ClientCapabilities: request.ClientCapabilities,
 	}, response)
-}
-
-type MotionResourceModel struct {
-	Id        types.String `tfsdk:"id"`
-	DeviceID  types.String `tfsdk:"device_id"`
-	Reference types.Object `tfsdk:"reference"`
-	Enabled   types.Bool   `tfsdk:"enabled"`
 }
 
 func (m MotionResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {

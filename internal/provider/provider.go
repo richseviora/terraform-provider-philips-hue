@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/richseviora/huego/pkg"
 	"terraform-provider-philips-hue/internal/provider/device"
+	"terraform-provider-philips-hue/internal/provider/motion"
 )
 
 // Ensure PhilipsHueProvider satisfies various provider interfaces.
@@ -98,6 +99,8 @@ func (p *PhilipsHueProvider) Resources(ctx context.Context) []func() resource.Re
 		NewRoomResource,
 		NewSceneResource,
 		NewZoneResource,
+		motion.NewMotionResource,
+		motion.NewMotionAutomationResource,
 	}
 }
 
