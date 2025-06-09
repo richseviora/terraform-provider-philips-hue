@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/richseviora/huego/pkg/resources/behavior_instance"
 	"github.com/richseviora/huego/pkg/resources/client"
+	"github.com/richseviora/huego/pkg/resources/common"
 	"terraform-provider-philips-hue/internal/provider/device"
 )
 
@@ -33,9 +35,10 @@ type Reference struct {
 }
 
 type TimeSlot struct {
-	Hour       types.Int32  `tfsdk:"hour"`
-	Minute     types.Int32  `tfsdk:"minute"`
-	Scenes     []Reference  `tfsdk:"scenes"`
+	Hour   types.Int32 `tfsdk:"hour"`
+	Minute types.Int32 `tfsdk:"minute"`
+	Scenes []Reference `tfsdk:"scenes"`
+	// The delay period in minutes. 0 to 60.
 	AfterDelay types.Int32  `tfsdk:"after_delay"`
 	AfterState types.String `tfsdk:"after_state"`
 }
@@ -46,6 +49,8 @@ type MotionAutomationResourceModel struct {
 	Targets       []Reference  `tfsdk:"targets"`
 	DarkThreshold types.Int32  `tfsdk:"dark_threshold"`
 	TimeSlots     []TimeSlot   `tfsdk:"time_slots"`
+	Enabled       types.Bool   `tfsdk:"enabled"`
+	Name          types.String `tfsdk:"name"`
 }
 
 func NewMotionAutomationResource() resource.Resource {
@@ -81,6 +86,13 @@ func (m MotionAutomationResource) Schema(ctx context.Context, req resource.Schem
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Validators:          []validator.String{stringvalidator.OneOf("previous_state", "all_of")},
 			},
+			"name": schema.StringAttribute{
+				Required:    true,
+				Description: "The name of the motion automation.",
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 32),
+				},
+			},
 			"sensor_id": schema.StringAttribute{
 				Required:    true,
 				Description: "The ID of the motion sensor.",
@@ -105,6 +117,10 @@ func (m MotionAutomationResource) Schema(ctx context.Context, req resource.Schem
 			"dark_threshold": schema.Int32Attribute{
 				Required:   true,
 				Validators: []validator.Int32{int32validator.Between(0, 65535)},
+			},
+			"enabled": schema.BoolAttribute{
+				Required:    true,
+				Description: "Whether the automation is enabled.",
 			},
 			"time_slots": schema.ListNestedAttribute{
 				Required:    true,
@@ -158,8 +174,24 @@ func (m MotionAutomationResource) Schema(ctx context.Context, req resource.Schem
 }
 
 func (m MotionAutomationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var data MotionAutomationResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	scriptId, err := m.client.GetBehaviorScriptIDForMetadataName("Motion Sensor")
+	create := SetCreateFromBody(data, scriptId)
+
+	response, err := m.client.BehaviorInstanceService().CreateBehaviorInstance(ctx, create)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating motion automation",
+			"Could not create motion automation ID: "+err.Error(),
+		)
+		return
+	}
+	data.ID = types.StringValue(response.RID)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (m MotionAutomationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -179,21 +211,48 @@ func (m MotionAutomationResource) Read(ctx context.Context, req resource.ReadReq
 			"Could not read motion automation ID "+data.ID.ValueString()+": "+err.Error(),
 		)
 	}
+	data = *SetModelFromBody(*resource)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (m MotionAutomationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var data MotionAutomationResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	update := SetUpdateFromBody(data)
+	_, err := m.client.BehaviorInstanceService().UpdateBehaviorInstance(ctx, data.ID.ValueString(), update)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating motion automation",
+			"Could not update motion automation ID "+data.ID.ValueString()+": "+err.Error(),
+		)
+		return
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (m MotionAutomationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	//TODO implement me
-	panic("implement me")
+	var data MotionAutomationResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	err := m.client.BehaviorInstanceService().DeleteBehaviorInstance(ctx, data.ID.ValueString())
+	if errors.Is(err, client.ErrNotFound) {
+		return
+	}
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting motion automation",
+			"Could not delete motion automation ID "+data.ID.ValueString()+": "+err.Error(),
+		)
+	}
 }
 
 func (m MotionAutomationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	//TODO implement me
-	panic("implement me")
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
 func Map[T any, R any](input []T, mapper func(T) R) []R {
@@ -205,7 +264,6 @@ func Map[T any, R any](input []T, mapper func(T) R) []R {
 }
 
 func SetModelFromBody(bi behavior_instance.Data) *MotionAutomationResourceModel {
-
 	m := &MotionAutomationResourceModel{
 		ID:       types.StringValue(bi.ID),
 		SensorID: types.StringValue(bi.Configuration.Source.RID),
@@ -227,10 +285,131 @@ func SetModelFromBody(bi behavior_instance.Data) *MotionAutomationResourceModel 
 					}
 				}),
 				AfterDelay: types.Int32Value(int32(t.OnNoMotion.After.Minutes)),
-				AfterState: types.StringValue(t.OnNoMotion.RecallSingle[0].NoMotionAction.Recall),
+				AfterState: types.StringValue(t.OnNoMotion.RecallSingle[0].Action),
 			}
 		}),
 	}
 
 	return m
+}
+
+func SetCreateFromBody(model MotionAutomationResourceModel, scriptId string) behavior_instance.CreateRequest {
+	return behavior_instance.CreateRequest{
+		ScriptID: scriptId,
+		Configuration: behavior_instance.Configuration{
+			Settings: behavior_instance.Settings{
+				DaylightSensitivity: behavior_instance.DaylightSensitivity{
+					DarkThreshold: int(model.DarkThreshold.ValueInt32()),
+					Offset:        7000,
+				},
+			},
+			Source: common.Reference{
+				RID:   model.SensorID.ValueString(),
+				RType: "sensor",
+			},
+			When: behavior_instance.When{
+				Timeslots: Map[TimeSlot](model.TimeSlots, func(t TimeSlot) behavior_instance.TimeSlots {
+					return behavior_instance.TimeSlots{
+						StartTime: behavior_instance.StartTime{
+							Time: behavior_instance.Time{
+								Hour:   int(t.Hour.ValueInt32()),
+								Minute: int(t.Minute.ValueInt32()),
+							},
+							Type: "time",
+						},
+						OnMotion: behavior_instance.OnMotion{
+							RecallSingle: Map[Reference, behavior_instance.RecallSingle](t.Scenes, func(s Reference) behavior_instance.RecallSingle {
+								return behavior_instance.RecallSingle{
+									Action: behavior_instance.Action{Recall: common.Reference{
+										RID:   s.Id.ValueString(),
+										RType: s.Type.ValueString(),
+									}},
+								}
+							}),
+						},
+						OnNoMotion: behavior_instance.OnNoMotion{
+							After: behavior_instance.After{
+								Minutes: int(t.AfterDelay.ValueInt32()),
+							},
+							RecallSingle: []behavior_instance.RecallSingleNoMotion{
+								{
+									Action: t.AfterState.ValueString(),
+								},
+							},
+						},
+					}
+				}),
+			},
+			Where: Map[Reference](model.Targets, func(t Reference) behavior_instance.Where {
+				return behavior_instance.Where{
+					Group: common.Reference{
+						RID:   t.Id.ValueString(),
+						RType: t.Type.ValueString(),
+					},
+				}
+			}),
+		},
+		Enabled:  model.Enabled.ValueBool(),
+		Metadata: &behavior_instance.Metadata{Name: model.Name.ValueString()},
+	}
+}
+
+func SetUpdateFromBody(model MotionAutomationResourceModel) behavior_instance.UpdateRequest {
+	return behavior_instance.UpdateRequest{
+		Configuration: &behavior_instance.Configuration{
+			Settings: behavior_instance.Settings{
+				DaylightSensitivity: behavior_instance.DaylightSensitivity{
+					DarkThreshold: int(model.DarkThreshold.ValueInt32()),
+					Offset:        7000,
+				},
+			},
+			Source: common.Reference{
+				RID:   model.SensorID.ValueString(),
+				RType: "sensor",
+			},
+			When: behavior_instance.When{
+				Timeslots: Map[TimeSlot](model.TimeSlots, func(t TimeSlot) behavior_instance.TimeSlots {
+					return behavior_instance.TimeSlots{
+						StartTime: behavior_instance.StartTime{
+							Time: behavior_instance.Time{
+								Hour:   int(t.Hour.ValueInt32()),
+								Minute: int(t.Minute.ValueInt32()),
+							},
+							Type: "time",
+						},
+						OnMotion: behavior_instance.OnMotion{
+							RecallSingle: Map[Reference, behavior_instance.RecallSingle](t.Scenes, func(s Reference) behavior_instance.RecallSingle {
+								return behavior_instance.RecallSingle{
+									Action: behavior_instance.Action{Recall: common.Reference{
+										RID:   s.Id.ValueString(),
+										RType: s.Type.ValueString(),
+									}},
+								}
+							}),
+						},
+						OnNoMotion: behavior_instance.OnNoMotion{
+							After: behavior_instance.After{
+								Minutes: int(t.AfterDelay.ValueInt32()),
+							},
+							RecallSingle: []behavior_instance.RecallSingleNoMotion{
+								{
+									Action: t.AfterState.ValueString(),
+								},
+							},
+						},
+					}
+				}),
+			},
+			Where: Map[Reference](model.Targets, func(t Reference) behavior_instance.Where {
+				return behavior_instance.Where{
+					Group: common.Reference{
+						RID:   t.Id.ValueString(),
+						RType: t.Type.ValueString(),
+					},
+				}
+			}),
+		},
+		Enabled:  model.Enabled.ValueBoolPointer(),
+		Metadata: &behavior_instance.Metadata{Name: model.Name.ValueString()},
+	}
 }

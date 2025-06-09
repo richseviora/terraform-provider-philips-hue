@@ -155,6 +155,7 @@ func (m MotionResource) Update(ctx context.Context, req resource.UpdateRequest, 
 			"Error updating motion",
 			"Could not update motion ID "+data.Id.ValueString()+": "+err.Error(),
 		)
+		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
