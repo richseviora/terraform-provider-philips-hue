@@ -14,8 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/richseviora/huego/pkg"
-	"github.com/richseviora/huego/pkg/resources/zigbee_connectivity"
-	"strings"
 	"terraform-provider-philips-hue/internal/provider/device"
 )
 
@@ -34,8 +32,8 @@ type PhilipsHueProvider struct {
 
 // PhilipsHueProviderModel describes the provider data model.
 type PhilipsHueProviderModel struct {
-	Endpoint      types.String `tfsdk:"endpoint"`
-	OutputImports types.Bool   `tfsdk:"output_imports"`
+	Endpoint types.String `tfsdk:"endpoint"`
+	Output   types.String `tfsdk:"output"`
 }
 
 func (p *PhilipsHueProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -50,8 +48,8 @@ func (p *PhilipsHueProvider) Schema(ctx context.Context, req provider.SchemaRequ
 				MarkdownDescription: "NOT IMPLEMENTED YET - The Philips Hue bridge IP address. Example: `192.168.1.100` or `philips-hue.local`.",
 				Optional:            true,
 			},
-			"output_imports": schema.BoolAttribute{
-				MarkdownDescription: "Whether the provider will output the import state for resources. Defaults to `false`.",
+			"output": schema.StringAttribute{
+				MarkdownDescription: "If set, the location of the output file to write the import data to. Example: `/tmp/import.tf`. If set to \"STDOUT\", the output will be written as a warning.",
 				Optional:            true,
 			},
 		},
@@ -73,17 +71,25 @@ func (p *PhilipsHueProvider) Configure(ctx context.Context, req provider.Configu
 	}
 
 	clientWithCache := device.NewClientWithCache(client)
-	if data.OutputImports.ValueBool() {
-		devices, zigbeeErrors, err := clientWithCache.GetAllDevices()
-		if err != nil {
-			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get devices, got error: %s", err))
-		} else {
-			resp.Diagnostics.AddWarning("Imports", generateImportOutput(devices, zigbeeErrors))
-		}
-	}
+	p.output(data, clientWithCache, resp)
 
 	resp.DataSourceData = clientWithCache
 	resp.ResourceData = clientWithCache
+}
+
+func (p *PhilipsHueProvider) output(data PhilipsHueProviderModel, clientWithCache *device.ClientWithCache, resp *provider.ConfigureResponse) {
+	if data.Output.IsNull() || data.Output.IsUnknown() {
+		return
+	}
+	devices, zigbeeErrors, err := clientWithCache.GetAllDevices()
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get devices, got error: %s", err))
+		return
+	}
+	if data.Output.ValueString() == "STDOUT" {
+		resp.Diagnostics.AddWarning("Imports", device.GenerateImportOutput(devices, zigbeeErrors))
+		return
+	}
 }
 
 func (p *PhilipsHueProvider) Resources(ctx context.Context) []func() resource.Resource {
@@ -119,34 +125,4 @@ func New(version string) func() provider.Provider {
 			version: version,
 		}
 	}
-}
-
-func generateImportOutput(entries []device.DeviceMappingEntry, missingEntries []zigbee_connectivity.Data) string {
-	resourceResult := ""
-	result := ""
-
-	for _, entry := range entries {
-		if !entry.IsLight() {
-			continue
-		}
-		formattedName := strings.ToLower(entry.Name)
-		formattedName = strings.ReplaceAll(formattedName, " ", "_")
-		result += fmt.Sprintf("\nimport {\n  # Name = %s\n  id = \"%s\"\n  to = philips_light.%s\n}\n", entry.Name, entry.MacAddress, formattedName)
-		resourceResult += fmt.Sprintf(`
-resource philips_light "%s" {
-  name = "%s"
-  type = "decorative"
-}
-`, formattedName, entry.Name)
-	}
-
-	for _, entry := range missingEntries {
-		result += fmt.Sprintf(`
-/* 
-Could not resolve MAC address:
-%+v
-*/
-`, entry)
-	}
-	return result + resourceResult
 }
