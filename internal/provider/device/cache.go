@@ -17,25 +17,18 @@ import (
 	"sync"
 )
 
-type DeviceMappingEntry struct {
-	Name                 string
-	DeviceID             string
-	LightID              string
-	ZigbeeConnectivityID string
-	MotionID             string
-	MacAddress           string
-}
-
-func (d DeviceMappingEntry) IsLight() bool {
-	return d.LightID != ""
-}
-
 type ClientWithCache struct {
 	client       client.HueServiceClient
 	cache        map[string]DeviceMappingEntry
 	zigbeeErrors []zigbee_connectivity.Data
 	cacheBuilt   bool
 	mutex        sync.Mutex
+}
+
+type ClientWithLightIDCache interface {
+	client.HueServiceClient
+	GetLightIDForMacAddress(macAddress string) (string, error)
+	GetMotionIDForMacAddress(macAddress string) (string, error)
 }
 
 func NewClientWithCache(client client.HueServiceClient) *ClientWithCache {
@@ -190,14 +183,8 @@ func (c *ClientWithCache) BehaviorScriptService() behavior_script.Service {
 	return c.BehaviorScriptService()
 }
 
-func (c *ClientWithCache) MotionService() motion.Service {
-	return c.MotionService()
-}
-
 //endregion
 
-type ClientWithLightIDCache interface {
-	client.HueServiceClient
-	GetLightIDForMacAddress(macAddress string) (string, error)
-	GetMotionIDForMacAddress(macAddress string) (string, error)
+func (c *ClientWithCache) MotionService() motion.Service {
+	return c.MotionService()
 }
