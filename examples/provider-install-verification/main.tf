@@ -7,7 +7,7 @@ terraform {
 }
 
 provider "philips" {
-  output_imports = false
+  # output = "STDOUT"
 }
 
 locals {
@@ -343,10 +343,17 @@ import {
   id = "68b39f81-1c15-4c82-bd0b-ab28606f3d2e"
 }
 
+
 import {
   for_each = local.bathroom_lights
   to       = philips_light.bathroom[each.key]
   id       = each.value
+}
+
+import {
+  # Name = Bathroom
+  id = "00:17:88:01:0c:d7:89:f9"
+  to = philips_motion.bathroom
 }
 
 resource philips_light "bathroom" {
@@ -361,6 +368,11 @@ resource philips_room "bathroom" {
   archetype  = "bathroom"
   device_ids = philips_light.bathroom[*].device_id
 }
+
+resource philips_motion "bathroom" {
+  enabled = true
+}
+
 
 resource philips_scene "bathroom_bright" {
   group   = philips_room.bathroom.reference

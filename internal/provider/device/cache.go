@@ -222,15 +222,15 @@ func (c *ClientWithCache) ZigbeeConnectivityService() zigbee_connectivity.Servic
 }
 
 func (c *ClientWithCache) BehaviorInstanceService() behavior_instance.Service {
-	return c.BehaviorInstanceService()
+	return c.client.BehaviorInstanceService()
+}
+
+func (c *ClientWithCache) MotionService() motion.Service {
+	return c.client.MotionService()
 }
 
 func (c *ClientWithCache) BehaviorScriptService() behavior_script.Service {
-	return c.BehaviorScriptService()
+	return c.client.BehaviorScriptService()
 }
 
 //endregion
-
-func (c *ClientWithCache) MotionService() motion.Service {
-	return c.MotionService()
-}

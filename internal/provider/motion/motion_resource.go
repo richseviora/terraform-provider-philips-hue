@@ -33,7 +33,7 @@ type MotionResource struct {
 	client device.ClientWithLightIDCache
 }
 
-func (m MotionResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
+func (m *MotionResource) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
 	if request.ProviderData == nil {
 		return
 	}
@@ -48,7 +48,7 @@ func (m MotionResource) Configure(ctx context.Context, request resource.Configur
 	m.client = client
 }
 
-func (m MotionResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+func (m *MotionResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	matched, err := regexp.MatchString(`^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$`, request.ID)
 	if err != nil {
 		resource.ImportStatePassthroughID(ctx, path.Root("id"), request, response)
@@ -67,11 +67,11 @@ func (m MotionResource) ImportState(ctx context.Context, request resource.Import
 	}, response)
 }
 
-func (m MotionResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (m *MotionResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_motion"
 }
 
-func (m MotionResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (m *MotionResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "A representation of a Philips Hue motion sensor.",
 		Attributes: map[string]schema.Attribute{
@@ -109,12 +109,12 @@ func (m MotionResource) Schema(ctx context.Context, req resource.SchemaRequest, 
 	}
 }
 
-func (m MotionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (m *MotionResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	resp.Diagnostics.AddError("Not implemented", "Direct create is not supported for this resource. Please import the resource instead.")
 	return
 }
 
-func (m MotionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (m *MotionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data MotionResourceModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -140,7 +140,7 @@ func (m MotionResource) Read(ctx context.Context, req resource.ReadRequest, resp
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (m MotionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (m *MotionResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data MotionResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
@@ -160,7 +160,7 @@ func (m MotionResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (m MotionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (m *MotionResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	resp.Diagnostics.AddError("Not implemented", "Direct delete is not supported for this resource. Please remove the resource from the app instead.")
 	return
 }

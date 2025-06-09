@@ -16,7 +16,7 @@ func GenerateImportOutput(entries []DeviceMappingEntry, missingEntries []zigbee_
 	result := ""
 
 	for _, entry := range entries {
-		if !entry.IsLight() {
+		if !(entry.IsLight() || entry.IsMotion()) {
 			continue
 		}
 		newResult, newResourceResult := generateEntryOutput(entry)
@@ -62,9 +62,8 @@ func generateMotionOutput(entry DeviceMappingEntry) (string, string) {
 	result := fmt.Sprintf("\nimport {\n  # Name = %s\n  id = \"%s\"\n  to = philips_motion.%s\n}\n", entry.Name, entry.MacAddress, formattedName)
 	resourceResult := fmt.Sprintf(`
 resource philips_motion "%s" {
-  name = "%s"
-  type = "decorative"
+  enabled = true
 }
-`, formattedName, entry.Name)
+`, formattedName)
 	return result, resourceResult
 }
