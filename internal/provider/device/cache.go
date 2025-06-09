@@ -17,24 +17,40 @@ import (
 	"sync"
 )
 
+type ResultCache struct {
+	cache map[string]interface{}
+	mutex *sync.Mutex
+}
+
+func NewResultCache() *ResultCache {
+	return &ResultCache{
+		cache: map[string]interface{}{},
+		mutex: &sync.Mutex{},
+	}
+}
+
 type ClientWithCache struct {
-	client       client.HueServiceClient
-	cache        map[string]DeviceMappingEntry
-	zigbeeErrors []zigbee_connectivity.Data
-	cacheBuilt   bool
-	mutex        sync.Mutex
+	client              client.HueServiceClient
+	deviceCache         map[string]DeviceMappingEntry
+	behaviorScriptCache *ResultCache
+	zigbeeErrors        []zigbee_connectivity.Data
+	cacheBuilt          bool
+	mutex               *sync.Mutex
 }
 
 type ClientWithLightIDCache interface {
 	client.HueServiceClient
 	GetLightIDForMacAddress(macAddress string) (string, error)
 	GetMotionIDForMacAddress(macAddress string) (string, error)
+	GetBehaviorScriptIDForMetadataName(name string) (string, error)
 }
 
 func NewClientWithCache(client client.HueServiceClient) *ClientWithCache {
 	return &ClientWithCache{
-		client: client,
-		cache:  make(map[string]DeviceMappingEntry),
+		client:              client,
+		behaviorScriptCache: NewResultCache(),
+		deviceCache:         make(map[string]DeviceMappingEntry),
+		mutex:               &sync.Mutex{},
 	}
 }
 
@@ -81,6 +97,35 @@ func (c *ClientWithCache) buildDeviceMap(ctx context.Context) (map[string]Device
 	return deviceMap, zigbeeEntries, nil
 }
 
+func (c *ClientWithCache) GetBehaviorScriptIDForMetadataName(name string) (string, error) {
+	c.behaviorScriptCache.mutex.Lock()
+	defer c.behaviorScriptCache.mutex.Unlock()
+
+	if cached, ok := c.behaviorScriptCache.cache[name]; ok {
+		if script, ok := cached.(behavior_script.Data); ok {
+			return script.ID, nil
+		}
+	}
+
+	scripts, err := c.client.BehaviorScriptService().GetAllBehaviorScripts(context.Background())
+	if err != nil {
+		return "", err
+	}
+
+	var result behavior_script.Data
+	for _, script := range scripts.Data {
+		c.behaviorScriptCache.cache[script.Metadata.Name] = script
+		if script.Metadata.Name == name {
+			result = script
+		}
+	}
+	if result.ID != "" {
+		return result.ID, nil
+	}
+
+	return "", errors.New("could not find behavior script with name: " + name)
+}
+
 func (c *ClientWithCache) GetLightIDForMacAddress(macAddress string) (string, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -88,7 +133,7 @@ func (c *ClientWithCache) GetLightIDForMacAddress(macAddress string) (string, er
 	if err != nil {
 		return "", err
 	}
-	for _, d := range c.cache {
+	for _, d := range c.deviceCache {
 		if d.MacAddress == macAddress {
 			return d.LightID, nil
 		}
@@ -103,7 +148,7 @@ func (c *ClientWithCache) GetMotionIDForMacAddress(macAddress string) (string, e
 	if err != nil {
 		return "", err
 	}
-	for _, d := range c.cache {
+	for _, d := range c.deviceCache {
 		if d.MacAddress == macAddress {
 			return d.MotionID, nil
 		}
@@ -118,7 +163,7 @@ func (c *ClientWithCache) GetAllDevices() ([]DeviceMappingEntry, []zigbee_connec
 	if err != nil {
 		return entries, data, err
 	}
-	for _, d := range c.cache {
+	for _, d := range c.deviceCache {
 		devices = append(devices, d)
 	}
 	slices.SortFunc(devices, func(i, j DeviceMappingEntry) int {
@@ -139,7 +184,7 @@ func (c *ClientWithCache) buildCache() ([]DeviceMappingEntry, []DeviceMappingEnt
 			return nil, nil, nil, err
 		}
 		c.zigbeeErrors = zigbeeErrors
-		c.cache = deviceMap
+		c.deviceCache = deviceMap
 		c.cacheBuilt = true
 	}
 	devices := make([]DeviceMappingEntry, 0)
@@ -148,6 +193,7 @@ func (c *ClientWithCache) buildCache() ([]DeviceMappingEntry, []DeviceMappingEnt
 
 var (
 	_ client.HueServiceClient = &ClientWithCache{}
+	_ ClientWithLightIDCache  = &ClientWithCache{}
 )
 
 // region Services
