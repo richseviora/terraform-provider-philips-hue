@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/richseviora/huego/pkg"
 	"terraform-provider-philips/internal/provider/device"
+	"terraform-provider-philips/internal/provider/logger"
 	"terraform-provider-philips/internal/provider/motion"
 )
 
@@ -65,7 +66,7 @@ func (p *PhilipsHueProvider) Configure(ctx context.Context, req provider.Configu
 		return
 	}
 
-	client, err := pkg.NewClientFromMDNS()
+	client, err := pkg.NewClientFromMDNS(logger.NewContextLogger(ctx))
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create client, got error: %s", err))
 		return

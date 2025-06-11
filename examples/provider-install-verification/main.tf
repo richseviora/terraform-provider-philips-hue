@@ -113,7 +113,7 @@ module "bedroom_reading" {
     rid = philips_room.bedroom.id
     rtype = "room"
   }
-  light_ids = [for l in local.bedroom_lights : l.device_id]
+  light_ids = [for l in local.bedroom_lights : l.id]
   light_ids_to_turn_off = [for l in [philips_light.bedroom_overhead[0], philips_light.bedroom_overhead[1]] : l.id]
   light_setting = {
     brightness        = 100
