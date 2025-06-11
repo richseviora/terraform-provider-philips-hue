@@ -23,7 +23,7 @@ import (
 	"github.com/richseviora/huego/pkg/resources/common"
 	"github.com/richseviora/huego/pkg/resources/light"
 	"github.com/richseviora/huego/pkg/resources/scene"
-	"terraform-provider-philips-hue/internal/provider/device"
+	"terraform-provider-philips/internal/provider/device"
 )
 
 var _ resource.Resource = &SceneResource{}

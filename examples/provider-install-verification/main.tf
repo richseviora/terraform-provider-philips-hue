@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     philips = {
-      source = "hashicorp.com/edu/philips-hue"
+      source = "hashicorp.com/edu/philips"
     }
   }
 }
@@ -79,6 +79,12 @@ import {
   to = philips_light.bedroom_valance
 }
 
+resource philips_room bedroom {
+  name       = "Bedroom"
+  archetype   = "bedroom"
+  device_ids = [for l in local.bedroom_lights : l.device_id]
+}
+
 resource philips_light bedroom_left {
   name     = "Bed Left"
   function = "decorative"
@@ -100,6 +106,20 @@ resource philips_light bedroom_overhead {
   function = "decorative"
 }
 
+module "bedroom_reading" {
+  source    = "./modules/room_scenes"
+  name      = "Bedroom Reading"
+  target    = {
+    rid = philips_room.bedroom.id
+    rtype = "room"
+  }
+  light_ids = [for l in local.bedroom_lights : l.device_id]
+  light_ids_to_turn_off = [for l in [philips_light.bedroom_overhead[0], philips_light.bedroom_overhead[1]] : l.id]
+  light_setting = {
+    brightness        = 100
+    color_temperature = 2200
+  }
+}
 
 import {
   # Name = Kitchen Range

@@ -16,7 +16,7 @@ import (
 	"github.com/richseviora/huego/pkg/resources/behavior_instance"
 	"github.com/richseviora/huego/pkg/resources/client"
 	"github.com/richseviora/huego/pkg/resources/common"
-	"terraform-provider-philips-hue/internal/provider/device"
+	"terraform-provider-philips/internal/provider/device"
 )
 
 var (

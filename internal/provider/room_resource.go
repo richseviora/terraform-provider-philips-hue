@@ -17,7 +17,7 @@ import (
 	"github.com/richseviora/huego/pkg/resources/client"
 	"github.com/richseviora/huego/pkg/resources/common"
 	room2 "github.com/richseviora/huego/pkg/resources/room"
-	"terraform-provider-philips-hue/internal/provider/device"
+	"terraform-provider-philips/internal/provider/device"
 )
 
 var _ resource.Resource = &RoomResource{}

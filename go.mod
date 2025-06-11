@@ -1,4 +1,4 @@
-module terraform-provider-philips-hue
+module terraform-provider-philips
 
 go 1.23.7
 

@@ -14,8 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/richseviora/huego/pkg"
-	"terraform-provider-philips-hue/internal/provider/device"
-	"terraform-provider-philips-hue/internal/provider/motion"
+	"terraform-provider-philips/internal/provider/device"
+	"terraform-provider-philips/internal/provider/motion"
 )
 
 // Ensure PhilipsHueProvider satisfies various provider interfaces.

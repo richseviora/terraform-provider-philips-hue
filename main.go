@@ -9,7 +9,7 @@ import (
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"terraform-provider-philips-hue/internal/provider"
+	"terraform-provider-philips/internal/provider"
 )
 
 var (

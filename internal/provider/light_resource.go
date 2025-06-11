@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/richseviora/huego/pkg/resources/light"
 	"regexp"
-	"terraform-provider-philips-hue/internal/provider/device"
+	"terraform-provider-philips/internal/provider/device"
 )
 
 var _ resource.Resource = &LightResource{}

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/richseviora/huego/pkg/resources/client"
-	"terraform-provider-philips-hue/internal/provider/device"
+	"terraform-provider-philips/internal/provider/device"
 
 	"github.com/richseviora/huego/pkg/resources/common"
 	"github.com/richseviora/huego/pkg/resources/zone"
