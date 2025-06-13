@@ -22,9 +22,9 @@ func TestRGBToColorFunction_White(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: `
-				provider "philips-hue" {}
+				provider "philips" {}
 				output "test" {
-					value = provider::philips-hue::rgb_to_color(255,255,255)
+					value = provider::philips::rgb_to_color(255,255,255)
 				}
 				`,
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -50,9 +50,9 @@ func TestRGBToColorFunction_Red(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: `
-				provider "philips-hue" {}
+				provider "philips" {}
 				output "test" {
-					value = provider::philips-hue::rgb_to_color(255,0,0)
+					value = provider::philips::rgb_to_color(255,0,0)
 				}
 				`,
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -79,7 +79,7 @@ func TestRGBToColorFunction_Null(t *testing.T) {
 			{
 				Config: `
 				output "test" {
-					value = provider::philips-hue::rgb_to_color(null,255,255)
+					value = provider::philips::rgb_to_color(null,255,255)
 				}
 				`,
 				// The parameter does not enable AllowNullValue
@@ -103,15 +103,10 @@ func TestRGBToColorFunction_Unknown(t *testing.T) {
 				}
 				
 				output "test" {
-					value = provider::philips-hue::rgb_to_color(null,255,255)
+					value = provider::philips::rgb_to_color("abc",255,255)
 				}
 				`,
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownOutputValue(
-						"test",
-						knownvalue.StringExact("testvalue"),
-					),
-				},
+				ExpectError: regexp.MustCompile(`a number is required`),
 			},
 		},
 	})

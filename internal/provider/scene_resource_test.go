@@ -37,17 +37,17 @@ func TestSceneResource(t *testing.T) {
 				Config: testAccExampleResourceConfig("one"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
-						"philips-hue_scene.test",
+						"philips_scene.test",
 						tfjsonpath.New("id"),
 						knownvalue.StringExact("example-id"),
 					),
 					statecheck.ExpectKnownValue(
-						"philips-hue_scene.test",
+						"philips_scene.test",
 						tfjsonpath.New("defaulted"),
 						knownvalue.StringExact("example value when not configured"),
 					),
 					statecheck.ExpectKnownValue(
-						"philips-hue_scene.test",
+						"philips_scene.test",
 						tfjsonpath.New("configurable_attribute"),
 						knownvalue.StringExact("one"),
 					),
@@ -55,7 +55,7 @@ func TestSceneResource(t *testing.T) {
 			},
 			// ImportState testing
 			{
-				ResourceName:      "philips-hue_scene.test",
+				ResourceName:      "philips_scene.test",
 				ImportState:       true,
 				ImportStateVerify: true,
 				// This is not normally necessary, but is here because this
@@ -69,17 +69,17 @@ func TestSceneResource(t *testing.T) {
 				Config: testAccExampleResourceConfig("two"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
-						"philips-hue_scene.test",
+						"philips_scene.test",
 						tfjsonpath.New("id"),
 						knownvalue.StringExact("example-id"),
 					),
 					statecheck.ExpectKnownValue(
-						"philips-hue_scene.test",
+						"philips_scene.test",
 						tfjsonpath.New("defaulted"),
 						knownvalue.StringExact("example value when not configured"),
 					),
 					statecheck.ExpectKnownValue(
-						"philips-hue_scene.test",
+						"philips_scene.test",
 						tfjsonpath.New("configurable_attribute"),
 						knownvalue.StringExact("two"),
 					),
@@ -92,9 +92,9 @@ func TestSceneResource(t *testing.T) {
 
 func testUnitExampleResourceConfig() string {
 	return `
-resource "philips-hue_scene" "test" {
+resource "philips_scene" "test" {
   name = "test scene"
-  group = { rid: "abc", rtype: "room" }
+  group = { id: "abc", type: "room" }
   actions = [
   {
   target_id = "abc"
@@ -111,21 +111,21 @@ resource "philips-hue_scene" "test" {
 
 func testAccExampleResourceConfig(configurableAttribute string) string {
 	return fmt.Sprintf(`
-resource "philips-hue_light" "test" {
+resource "philips_light" "test" {
   name = %[1]q
   function = "functional"
 }
 
-resource "philips-hue_room" "room" {
+resource "philips_room" "room" {
   name = "test room"
   archetype = "living_room"
-device_ids = [philips-hue_light.test.device_id]
+device_ids = [philips_light.test.device_id]
 }
 
-resource "philips-hue_scene" "test" {
+resource "philips_scene" "test" {
   name = "test scene"
  actions = []
- group = philips-hue_room.room.reference
+ group = philips_room.room.reference
 }
 `, configurableAttribute)
 }
