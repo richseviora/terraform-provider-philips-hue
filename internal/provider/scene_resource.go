@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -59,6 +60,7 @@ type SceneActionModel struct {
 
 type SceneResourceModel struct {
 	Id      types.String       `tfsdk:"id"`
+	Type    types.String       `tfsdk:"type"`
 	Name    types.String       `tfsdk:"name"`
 	Actions []SceneActionModel `tfsdk:"actions"`
 	Group   *ResourceReference `tfsdk:"group"`
@@ -77,6 +79,10 @@ func (s *SceneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+			"type": schema.StringAttribute{
+				Computed: true,
+				Default:  stringdefault.StaticString("scene"),
 			},
 			"name": schema.StringAttribute{
 				Required:    true,

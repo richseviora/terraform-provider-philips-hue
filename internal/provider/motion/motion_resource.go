@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/richseviora/huego/pkg/resources/motion"
@@ -24,6 +25,7 @@ var (
 
 type MotionResourceModel struct {
 	Id        types.String `tfsdk:"id"`
+	Type      types.String `tfsdk:"type"`
 	DeviceID  types.String `tfsdk:"device_id"`
 	Reference types.Object `tfsdk:"reference"`
 	Enabled   types.Bool   `tfsdk:"enabled"`
@@ -81,6 +83,10 @@ func (m *MotionResource) Schema(ctx context.Context, req resource.SchemaRequest,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+			"type": schema.StringAttribute{
+				Computed: true,
+				Default:  stringdefault.StaticString("motion"),
 			},
 			"enabled": schema.BoolAttribute{
 				Required:    true,

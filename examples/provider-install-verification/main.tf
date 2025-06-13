@@ -58,6 +58,6 @@ locals {
 
 resource philips_zone "everything" {
   name      = "EVERYTHING"
-  type      = "home"
+  archetype      = "home"
   light_ids = [for light in local.all_lights : light.id]
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -27,6 +28,7 @@ type LightResource struct {
 
 type LightResourceModel struct {
 	Id       types.String `tfsdk:"id"`
+	Type     types.String `tfsdk:"type"`
 	Name     types.String `tfsdk:"name"`
 	Function types.String `tfsdk:"function"`
 	DeviceID types.String `tfsdk:"device_id"`
@@ -57,6 +59,10 @@ func (l *LightResource) Schema(ctx context.Context, request resource.SchemaReque
 				},
 				Default:   nil,
 				WriteOnly: false,
+			},
+			"type": schema.StringAttribute{
+				Computed: true,
+				Default:  stringdefault.StaticString("light"),
 			},
 			"name": schema.StringAttribute{
 				Required:            true,

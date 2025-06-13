@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/richseviora/huego/pkg/resources/client"
 	"terraform-provider-philips/internal/provider/device"
 
@@ -38,9 +39,10 @@ type Reference struct {
 
 type ZoneResourceModel struct {
 	ID        types.String   `tfsdk:"id"`
+	Type      types.String   `tfsdk:"type"`
 	Name      types.String   `tfsdk:"name"`
 	LightIDs  []types.String `tfsdk:"light_ids"`
-	Type      types.String   `tfsdk:"type"`
+	Archetype types.String   `tfsdk:"archetype"`
 	Reference types.Object   `tfsdk:"reference"`
 }
 
@@ -73,6 +75,10 @@ func (z *ZoneResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 			"id": schema.StringAttribute{Computed: true, PlanModifiers: []planmodifier.String{
 				stringplanmodifier.UseStateForUnknown(),
 			}},
+			"type": schema.StringAttribute{
+				Computed: true,
+				Default:  stringdefault.StaticString("zone"),
+			},
 			"name": schema.StringAttribute{Required: true, Description: "The name of the zone. 1-32 characters long.", Validators: []validator.String{
 				stringvalidator.LengthBetween(1, 32),
 			}},
@@ -81,7 +87,7 @@ func (z *ZoneResource) Schema(ctx context.Context, req resource.SchemaRequest, r
 				Required:    true,
 				Description: "The IDs of the lights to be assigned to the zone.", PlanModifiers: []planmodifier.Set{},
 			},
-			"type": schema.StringAttribute{
+			"archetype": schema.StringAttribute{
 				Required: true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(common.AreaNames[:]...),
@@ -133,7 +139,7 @@ func (z *ZoneResource) Create(ctx context.Context, req resource.CreateRequest, r
 		"rtype": types.StringType,
 	}, map[string]attr.Value{
 		"rid":   types.StringValue(createdBody.Data[0].RID),
-		"rtype": types.StringValue("room"),
+		"rtype": types.StringValue("zone"),
 	})
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 
@@ -207,8 +213,9 @@ func createZoneModelFromData(data *zone.ZoneData) ZoneResourceModel {
 	return ZoneResourceModel{
 		ID:        types.StringValue(data.ID),
 		Name:      types.StringValue(data.Metadata.Name),
+		Type:      types.StringValue("zone"),
 		LightIDs:  lightIds,
-		Type:      types.StringValue(data.Metadata.Archetype),
+		Archetype: types.StringValue(data.Metadata.Archetype),
 		Reference: reference,
 	}
 }

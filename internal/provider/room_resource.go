@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -34,6 +35,7 @@ type RoomResource struct {
 
 type RoomResourceModel struct {
 	Id        types.String `tfsdk:"id"`
+	Type      types.String `tfsdk:"type"`
 	Name      types.String `tfsdk:"name"`
 	DeviceIds types.Set    `tfsdk:"device_ids"`
 	Archetype types.String `tfsdk:"archetype"`
@@ -54,6 +56,10 @@ func (r *RoomResource) Schema(ctx context.Context, request resource.SchemaReques
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+			},
+			"type": schema.StringAttribute{
+				Computed: true,
+				Default:  stringdefault.StaticString("room"),
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
