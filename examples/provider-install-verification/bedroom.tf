@@ -60,3 +60,18 @@ module "bedroom_reading" {
     color_temperature = 2200
   }
 }
+
+module "bedroom_day" {
+  source = "./modules/room_scenes"
+  name   = "Bedroom Day"
+  target = philips_room.bedroom
+  lights = local.bedroom_lights
+  lights_to_turn_off = [
+    philips_light.bedroom_overhead[0], philips_light.bedroom_overhead[1], philips_light.bedroom_right,
+    philips_light.bedroom_left
+  ]
+  light_setting = {
+    brightness        = 100
+    color_temperature = 6000
+  }
+}
