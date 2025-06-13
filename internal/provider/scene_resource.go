@@ -45,8 +45,8 @@ type SceneActionColorModel struct {
 }
 
 type ResourceReference struct {
-	Rid   types.String `tfsdk:"rid"`
-	Rtype types.String `tfsdk:"rtype"`
+	Rid   types.String `tfsdk:"id"`
+	Rtype types.String `tfsdk:"type"`
 }
 
 type SceneActionModel struct {
@@ -92,8 +92,8 @@ func (s *SceneResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Required:    true,
 				Description: "The group this scene belongs to.",
 				AttributeTypes: map[string]attr.Type{
-					"rid":   types.StringType,
-					"rtype": types.StringType,
+					"id":   types.StringType,
+					"type": types.StringType,
 				},
 				PlanModifiers: []planmodifier.Object{
 					objectplanmodifier.RequiresReplace(),

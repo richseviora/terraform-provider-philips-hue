@@ -40,7 +40,7 @@ resource philips_motion "bathroom" {
 }
 
 resource philips_scene "bathroom_bright" {
-  group   = philips_room.bathroom.reference
+  group   = philips_room.bathroom
   name    = "Bright"
   actions = [
     for light in philips_light.bathroom : {
@@ -54,7 +54,7 @@ resource philips_scene "bathroom_bright" {
 }
 
 resource philips_scene "bathroom_cool" {
-  group   = philips_room.bathroom.reference
+  group   = philips_room.bathroom
   name    = "Bathroom Cold"
   actions = [
     for light in philips_light.bathroom : {

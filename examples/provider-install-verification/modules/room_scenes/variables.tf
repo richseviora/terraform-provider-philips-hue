@@ -4,14 +4,20 @@ variable "name" {
   description = "The name of the scene to be created. Will also be used when generating scene names."
 }
 
-variable "light_ids" {
-  type = list(string)
-  description = "All the light IDs in the room."
+variable "lights" {
+  type = list(object({
+    id = string
+    type = string
+  }))
+  description = "All the lights in the room."
 }
 
-variable "light_ids_to_turn_off" {
-  type = list(string)
-  description = "All the light IDs in the room you'd like to turn off with the scene"
+variable "lights_to_turn_off" {
+  type = list(object({
+    id = string
+    type = string
+  }))
+  description = "All the lights in the room you'd like to turn off with the scene"
 }
 
 variable "light_setting" {
@@ -24,8 +30,8 @@ variable "light_setting" {
 
 variable "target" {
   type = object({
-    rid   = string
-    rtype = string
+    id   = string
+    type = string
   })
   description = "The target room or zone for the scene"
 }

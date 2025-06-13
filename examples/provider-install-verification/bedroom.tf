@@ -24,7 +24,7 @@ import {
 
 resource philips_room bedroom {
   name       = "Bedroom"
-  archetype   = "bedroom"
+  archetype  = "bedroom"
   device_ids = [for l in local.bedroom_lights : l.device_id]
 }
 
@@ -50,11 +50,11 @@ resource philips_light bedroom_overhead {
 }
 
 module "bedroom_reading" {
-  source    = "./modules/room_scenes"
-  name      = "Bedroom Reading"
-  target    = philips_room.bedroom.reference
-  light_ids = [for l in local.bedroom_lights : l.id]
-  light_ids_to_turn_off = [for l in [philips_light.bedroom_overhead[0], philips_light.bedroom_overhead[1]] : l.id]
+  source = "./modules/room_scenes"
+  name   = "Bedroom Reading"
+  target = philips_room.bedroom
+  lights = local.bedroom_lights
+  lights_to_turn_off = [philips_light.bedroom_overhead[0], philips_light.bedroom_overhead[1]]
   light_setting = {
     brightness        = 100
     color_temperature = 2200

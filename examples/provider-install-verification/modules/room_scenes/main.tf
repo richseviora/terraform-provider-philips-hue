@@ -9,8 +9,8 @@ terraform {
 }
 
 locals {
-  enabled_act = setsubtract(var.light_ids, var.light_ids_to_turn_off)
-  disabled_lights = var.light_ids_to_turn_off
+  enabled_act = setsubtract(var.lights, var.lights_to_turn_off)
+  disabled_lights = var.lights_to_turn_off
 }
 
 
@@ -18,17 +18,17 @@ resource philips_scene "scene" {
   name  = var.name
   group = var.target
   actions = concat([
-    for id in local.enabled_act : {
-      target_id         = id
-      target_type       = "light"
+    for light in local.enabled_act : {
+      target_id         = light.id
+      target_type       = light.type
       on                = true
       brightness        = var.light_setting.brightness
       color_temperature = var.light_setting.color_temperature
     }
   ], [
-    for id in local.disabled_lights : {
-      target_id         = id
-      target_type       = "light"
+    for light in local.disabled_lights : {
+      target_id         = light.id
+      target_type       = light.type
       on                = false
       brightness        = var.light_setting.brightness
       color_temperature = var.light_setting.color_temperature
