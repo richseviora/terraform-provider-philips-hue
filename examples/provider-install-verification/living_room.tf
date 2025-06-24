@@ -69,62 +69,62 @@ import {
 }
 
 
-resource philips_light "desk_left" {
+resource "philips_light" "desk_left" {
   name     = "Desk Left"
   function = "decorative"
 }
 
-resource philips_light "desk_right" {
+resource "philips_light" "desk_right" {
   name     = "Desk Right"
   function = "decorative"
 }
 
-resource philips_light "tv_strip" {
+resource "philips_light" "tv_strip" {
   name     = "Desk and TV Strip"
   function = "decorative"
 }
 
-resource philips_light "hallway_overhead_1" {
+resource "philips_light" "hallway_overhead_1" {
   name     = "Hallway Overhead 1"
   function = "decorative"
 }
 
-resource philips_light "hallway_overhead_2" {
+resource "philips_light" "hallway_overhead_2" {
   name     = "Hallway Overhead 2"
   function = "decorative"
 }
 
-resource philips_light "living_room_bookshelf" {
+resource "philips_light" "living_room_bookshelf" {
   name     = "Living Room Bookshelf"
   function = "decorative"
 }
 
-resource philips_light "living_room_kitchen_wall" {
+resource "philips_light" "living_room_kitchen_wall" {
   name     = "Living Room Kitchen Wall"
   function = "decorative"
 }
 
-resource philips_light "living_room_left" {
+resource "philips_light" "living_room_left" {
   name     = "Living Room Left"
   function = "decorative"
 }
 
-resource philips_light "living_room_orb" {
+resource "philips_light" "living_room_orb" {
   name     = "Living Room ORB"
   function = "decorative"
 }
 
-resource philips_light "living_room_tv_wall" {
+resource "philips_light" "living_room_tv_wall" {
   name     = "Living Room TV Wall"
   function = "decorative"
 }
 
-resource philips_light "living_room_window_strip" {
+resource "philips_light" "living_room_window_strip" {
   name     = "Living Room Window Strip"
   function = "decorative"
 }
 
-resource philips_room "living_room" {
+resource "philips_room" "living_room" {
   name       = "Living Room"
   archetype  = "living_room"
   device_ids = [for light in local.living_room_lights : light.device_id]

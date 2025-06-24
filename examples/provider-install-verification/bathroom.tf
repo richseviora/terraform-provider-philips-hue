@@ -22,26 +22,26 @@ import {
   to = philips_motion.bathroom
 }
 
-resource philips_light "bathroom" {
+resource "philips_light" "bathroom" {
   count    = 6
   name     = "Bathroom ${count.index + 1}"
   function = "functional"
 }
 
 
-resource philips_room "bathroom" {
+resource "philips_room" "bathroom" {
   name       = "Bathroom"
   archetype  = "bathroom"
   device_ids = philips_light.bathroom[*].device_id
 }
 
-resource philips_motion "bathroom" {
+resource "philips_motion" "bathroom" {
   enabled = true
 }
 
-resource philips_scene "bathroom_bright" {
-  group   = philips_room.bathroom
-  name    = "Bright"
+resource "philips_scene" "bathroom_bright" {
+  group = philips_room.bathroom
+  name  = "Bright"
   actions = [
     for light in philips_light.bathroom : {
       target_id         = light.id
@@ -53,9 +53,9 @@ resource philips_scene "bathroom_bright" {
   ]
 }
 
-resource philips_scene "bathroom_cool" {
-  group   = philips_room.bathroom
-  name    = "Bathroom Cool"
+resource "philips_scene" "bathroom_cool" {
+  group = philips_room.bathroom
+  name  = "Bathroom Cool"
   actions = [
     for light in philips_light.bathroom : {
       target_id         = light.id

@@ -10,18 +10,18 @@ import {
   to = philips_light.hallway_strip
 }
 
-resource philips_light "hallway_lamp" {
+resource "philips_light" "hallway_lamp" {
   name     = "Hallway Lamp"
   function = "decorative"
 }
 
-resource philips_light "hallway_strip" {
+resource "philips_light" "hallway_strip" {
   name     = "Hallway Strip"
   function = "decorative"
 }
 
 
-resource philips_room "hallway" {
+resource "philips_room" "hallway" {
   name       = "Hallway"
   archetype  = "hallway"
   device_ids = [for light in local.hallway_lights : light.device_id]

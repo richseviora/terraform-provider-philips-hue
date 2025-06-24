@@ -64,7 +64,7 @@ locals {
 }
 
 
-resource philips_zone "everything" {
+resource "philips_zone" "everything" {
   name      = "EVERYTHING"
   archetype = "home"
   light_ids = [for light in local.all_lights : light.id]

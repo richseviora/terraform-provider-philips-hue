@@ -1,12 +1,12 @@
 variable "name" {
-  type = string
-  default = "Room"
+  type        = string
+  default     = "Room"
   description = "The name of the scene to be created. Will also be used when generating scene names."
 }
 
 variable "lights" {
   type = list(object({
-    id = string
+    id   = string
     type = string
   }))
   description = "All the lights in the room."
@@ -14,7 +14,7 @@ variable "lights" {
 
 variable "lights_to_turn_off" {
   type = list(object({
-    id = string
+    id   = string
     type = string
   }))
   description = "All the lights in the room you'd like to turn off with the scene"
@@ -22,7 +22,7 @@ variable "lights_to_turn_off" {
 
 variable "light_setting" {
   type = object({
-    brightness = number
+    brightness        = number
     color_temperature = number
   })
   description = "the light settings to apply"

@@ -22,38 +22,38 @@ import {
   to = philips_light.bedroom_valance
 }
 
-resource philips_room bedroom {
+resource "philips_room" "bedroom" {
   name       = "Bedroom"
   archetype  = "bedroom"
   device_ids = [for l in local.bedroom_lights : l.device_id]
 }
 
-resource philips_light bedroom_left {
+resource "philips_light" "bedroom_left" {
   name     = "Bed Left"
   function = "decorative"
 }
 
-resource philips_light bedroom_right {
+resource "philips_light" "bedroom_right" {
   name     = "Bed Right"
   function = "decorative"
 }
 
-resource philips_light bedroom_valance {
+resource "philips_light" "bedroom_valance" {
   name     = "Bedroom Valance"
   function = "decorative"
 }
 
-resource philips_light bedroom_overhead {
+resource "philips_light" "bedroom_overhead" {
   count    = 2
   name     = "Bedroom Overhead ${count.index + 1}"
   function = "decorative"
 }
 
 module "bedroom_reading" {
-  source = "./modules/room_scenes"
-  name   = "Bedroom Reading"
-  target = philips_room.bedroom
-  lights = local.bedroom_lights
+  source             = "./modules/room_scenes"
+  name               = "Bedroom Reading"
+  target             = philips_room.bedroom
+  lights             = local.bedroom_lights
   lights_to_turn_off = [philips_light.bedroom_overhead[0], philips_light.bedroom_overhead[1]]
   light_setting = {
     brightness        = 100

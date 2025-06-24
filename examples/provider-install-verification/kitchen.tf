@@ -35,36 +35,36 @@ import {
   to = philips_light.kitchen_sink_strip
 }
 
-resource philips_light "kitchen_range" {
+resource "philips_light" "kitchen_range" {
   name     = "Kitchen Range"
   function = "functional"
 }
 
-resource philips_light "kitchen_shelves" {
+resource "philips_light" "kitchen_shelves" {
   name     = "Kitchen Shelves"
   function = "decorative"
 }
 
-resource philips_light "kitchen_sink_strip" {
+resource "philips_light" "kitchen_sink_strip" {
   name     = "Sink Strip"
   function = "functional"
 }
-resource philips_light "kitchen_spot_outside" {
+resource "philips_light" "kitchen_spot_outside" {
   name     = "Kitchen Spot Outside"
   function = "decorative"
 }
 
-resource philips_light "kitchen_table_spot" {
+resource "philips_light" "kitchen_table_spot" {
   name     = "Kitchen Table Spot"
   function = "decorative"
 }
 
-resource philips_light "kitchen_valance" {
+resource "philips_light" "kitchen_valance" {
   name     = "Kitchen Valance"
   function = "decorative"
 }
 
-resource philips_room "kitchen" {
+resource "philips_room" "kitchen" {
   name       = "Kitchen"
   archetype  = "kitchen"
   device_ids = [for light in local.kitchen_lights : light.device_id]
