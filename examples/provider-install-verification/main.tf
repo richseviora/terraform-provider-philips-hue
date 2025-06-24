@@ -6,8 +6,16 @@ terraform {
   }
 }
 
+variable "application_key" {
+  type      = string
+  sensitive = true
+}
+
 provider "philips" {
-  # output = "STDOUT"
+  bridge = {
+    ip_address      = "192.168.50.209"
+    application_key = var.application_key
+  }
 }
 
 locals {
@@ -58,6 +66,6 @@ locals {
 
 resource philips_zone "everything" {
   name      = "EVERYTHING"
-  archetype      = "home"
+  archetype = "home"
   light_ids = [for light in local.all_lights : light.id]
 }

@@ -111,7 +111,7 @@ resource philips_light "living_room_left" {
 
 resource philips_light "living_room_orb" {
   name     = "Living Room ORB"
-  function = "functional"
+  function = "decorative"
 }
 
 resource philips_light "living_room_tv_wall" {

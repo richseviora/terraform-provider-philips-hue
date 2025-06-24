@@ -48,9 +48,9 @@ type PhilipsHueClient struct {
 
 // PhilipsHueProviderModel describes the provider data model.
 type PhilipsHueProviderModel struct {
-	Bridge PhilipsHueBridge `tfsdk:"bridge"`
-	Output types.String     `tfsdk:"output"`
-	Client PhilipsHueClient `tfsdk:"auto_connect"`
+	Bridge *PhilipsHueBridge `tfsdk:"bridge"`
+	Output types.String      `tfsdk:"output"`
+	Client *PhilipsHueClient `tfsdk:"client"`
 }
 
 func (p *PhilipsHueProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -81,7 +81,7 @@ func (p *PhilipsHueProvider) Schema(ctx context.Context, req provider.SchemaRequ
 				Optional:            true,
 			},
 			"client": schema.SingleNestedAttribute{
-				MarkdownDescription: "The client configuration to use for connecting to the bridge.",
+				MarkdownDescription: "NOT TESTED - The client configuration to use for connecting to the bridge.",
 				Optional:            true,
 				Attributes: map[string]schema.Attribute{
 					"file_path": schema.StringAttribute{
