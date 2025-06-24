@@ -55,7 +55,7 @@ resource philips_scene "bathroom_bright" {
 
 resource philips_scene "bathroom_cool" {
   group   = philips_room.bathroom
-  name    = "Bathroom Cold"
+  name    = "Bathroom Cool"
   actions = [
     for light in philips_light.bathroom : {
       target_id         = light.id
